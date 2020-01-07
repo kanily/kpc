@@ -21,10 +21,22 @@ English | [简体中文](./README-zh_CN.md)
 ## Features 
 
 * Support multiple frameworks: [Intact][1] / [Vue][2] / [React][3] / [Angular][4].
-* Complete custom theme system.
-* 360° locate popup layer.
-* Declarative form validation.
-* Excellent [documents](https://ksc-fe.github.io/kpc/) and unit tests.
+* Customize theme competely.
+* Locate popup layer with a full 360°.
+* Adopt a declarative form validation.
+* Have an Excellent [documents](https://ksc-fe.github.io/kpc/) and unit tests.
+
+# Documentation 
+You can find the KPC documentation [on the website](https://design.ksyun.com/).  
+Check out the [Getting Started](https://design.ksyun.com/docs/getting-started/) page for a quick overview.
+
+The documentation is divided into several sections:
+
+* [Design Language](https://design.ksyun.com/docs/design/language/)
+* [Components](https://design.ksyun.com/docs/getting-started/)
+* [KPC Main Concepts](https://design.ksyun.com/docs/blogs/design/)
+* [Cutomize Theme](https://kpc-theme.ksyun.com/)
+
 
 ## Browsers Support
 
