@@ -26,7 +26,7 @@ English | [简体中文](./README-zh_CN.md)
 * Adopt a declarative form validation.
 * Have an Excellent [documents](https://ksc-fe.github.io/kpc/) and unit tests.
 
-# Documentation 
+## Documentation 
 You can find the KPC documentation [on the website](https://design.ksyun.com/).  
 Check out the [Getting Started](https://design.ksyun.com/docs/getting-started/) page for a quick overview.
 
