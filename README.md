@@ -18,6 +18,10 @@
 
 English | [简体中文](./README-zh_CN.md)
 
+## Inspiration
+
+With the development of business and teams in our companies, it is difficult to regular others to use the same web framework for there are all kinds of web components in front-end market, or say it is not neccessay. However, it is neccesary to uniform the style of design and interaction in different production lines in whole company. As we all know, the main web frameworks in single page applications development are based in React/Vue/Angular. Using different frameworks also have some repeated works, and increase the cost of maintainance because of that. On the other hand, it is not easy to ensure that each library and interation have common style with others, even if we are according to the same UI designed documents in our developing. That is Why we create the KPC. The meaning of existence of the KPC: Using the same web componets which can match different frameworks, it makes our production in uniform style in different web framework.(write onece, run anywhere)   
+
 ## Features 
 
 * Support multiple frameworks: [Intact][1] / [Vue][2] / [React][3] / [Angular][4].
@@ -118,7 +122,7 @@ npm install kpc-angular -S
 
 ### Configure `webpack.config.js`
 
-You need use `@angular-builders/custom-webapck` to configure webpack, if your project initialized by Angular CLI.
+if your project initialized by Angular CLI, you need use `@angular-builders/custom-webapck` to configure webpack.
 
 ```js
 const path = require('path');
@@ -186,7 +190,6 @@ export class AppComponent {
 ```
 
 ## Immediate Feedback
-
 Welcome to join us by QQ. Group Number: 529739732 
 
 [![KPC Official QQ Group](https://pub.idqqimg.com/wpa/images/group.png)](https://shang.qq.com/wpa/qunwpa?idkey=a9ef1aa7e7befbd3eaa61a3f2c3f7ab17436dbd317f6d02c9a643e0049e52cad)
