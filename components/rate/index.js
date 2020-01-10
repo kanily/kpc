@@ -7,12 +7,18 @@ export default class Rate extends Intact {
     @Intact.template()
     static template = template;
 
+    static blocks = ['icon'];
+
     static propTypes = {
         value: Number,
         count: Number,
         disabled: Boolean,
         half: false,
         clearable: false,
+    };
+
+    static events = {
+        mouseleave: true,
     };
 
     defaults() {
@@ -57,7 +63,9 @@ export default class Rate extends Intact {
         this.set('_value', value);
     }
 
-    onMouseLeaveComponent() {
+    onMouseLeaveComponent(e) {
+        this.trigger('mouseleave', e);
+
         if (this.get('disabled')) return;
 
         this.set('_value', this.get('value'));

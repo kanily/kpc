@@ -16,6 +16,7 @@ order: 0
     2. `digits {Boolean}`： 请输入数字
     3. `email {Boolean}`: 请输入正确的邮箱地址
     4. `url {Boolean}`: 请输入正确的网址
+        > 该规则可以验证IP地址，但是会排除`192.168.X.X | 192.254.X.X | 172.16.0.0 - 172.31.255.255 | 10.X.X.X | 172.X.X.X`这类保留IP地址
     5. `date {Boolean}`：请输入正确的日期
     6. `dateISO {Boolean}`：请输入正确的日期（YYYY-MM-DD）
     7. `number {Boolean}`：请输入正确的数
@@ -35,7 +36,28 @@ order: 0
 另外，验证失败时，可以通过`Form`的`getFirstInvalidFormItem()`方法来获取第一条出错的`FormItem`
 
 > 验证的字段名必须是当前上下文对象上的直接属性名，在循环中我们必须通过索引来拼接取值路径字符串，
-> 例如：`"users.0.phone"`
+> 例如：`"item.0.value"`
+> ```vue
+> // @code
+> <!-- 错误的model定义 -->
+> <FormItem v-for="(item, index) in data"
+>     model="item.value"
+>     :rules="{required: true}" 
+>     :key="index"
+> >
+>     <Input v-model="item.value" />
+> </FormItem>
+> 
+> <!-- 正确的model定义 -->
+> <FormItem v-for="(item, index) in data"
+>     :model="`data.${index}.value`"
+>     :rules="{required: true}" 
+>     :key="index"
+> >
+>     <Input v-model="item.value" />
+> </FormItem>
+> 
+> ```
 
 > React下，需要往子组件注入当前上下文`_context`，因为`FormItem`需要从当前上下文获取待验证的值，
 > 详见下面`index.jsx`示例文件

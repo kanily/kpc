@@ -1,49 +1,66 @@
 ---
 title: React中使用
-order: 1.1
+order: 1.2
 sidebar: doc
 ---
 
-使kpc运行在React框架中，我们只需要引入React兼容层[intact-react][1]即可
+# 准备工作
 
-# 语法说明
+在学习使用kpc之前，假设你已经掌握了以下知识：
 
-文档中针对intact的例子，我们只需要做以下写法上的转换即可
+1. [webpack][2] + [babel][3]
+2. [React][4]
 
-| 类别 | intact写法 | react写法 | 说明 |
-| --- | --- | --- | --- |
-| 事件 | `ev-click` | `onClick` | 保留React事件命名风格，`on` + 事件名首字母大写 |
-| 默认事件 | `ev-$change:value` | `on$change-value` | React属性名不支持冒号(:)，改为连字符(-)即可 |
-| 事件回调传参 | `ev-click={{ self.onClick.bind(self, data) }}` | `onClick={this.onClick.bind(this, data)}` | - |
-| 属性 | `name={{ self.get('name') }}` | `name={this.state.name}` | - |
-| block | `<Dialog><b:header><div>header</div></b:header></Dialog>` | `<Dialog b-header={<div>header</div>} />` | `b:header`block对应React的属性`b-header` |
-| block parent() | `<b:header>{{ parent() }}header</b:header>` | 不支持引用父组件定义的内容 | - |
-| 带参数的block | `<Transfer><b:label params="data"><div>{{ data.name }}</div></b:label></Transfer>` | `<Transfer b-label={(data) => <div>{data.name}</div>} />` | `b-lablel`属性值为函数 |
-| 双向绑定任意属性 `@since intact-vue@0.3.7` | `v-model:name="name"` | `on$change-name={(c, v) => this.setState({name: v})} name={this.state.name}` | React不支持`v-model`语法糖，改为属性和事件的方式即可 |
+# 安装
 
-另外当需要将vNode作为属性传给kpc组件时，需要使用`Intact.normalize()`方法处理vNode
-
-> 如果是作为子元素`children`，则没有必要`normalize`，因为兼容层默认会normalize子元素
-
-```js
-import React from 'react';
-import Intact from 'intact';
-import Badge from 'kpc/components/badge';
-
-class App extends React.Component {
-    render() {
-        return (
-            // 作为属性，需要normalize
-            <Badge text={Intact.normalize(<div>test</div>)}>
-                <div>test</div>
-            </Badge>
-        )
-    }
-}
+```shell
+npm install kpc-react -S
 ```
 
-> `Table`组件的`scheme`属性中`template`字段返回的vNode无需`normalize`，因为组件内部做了兼容，
-> 不过多次调用`normalize`也没有问题。
+# CDN
+
+通过[cdn.jsdelivr.net/npm/kpc/dist/](https://cdn.jsdelivr.net/npm/kpc/dist/)可以直接引入最新版kpc，建议使用锁定版本地址，
+例如：[cdn.jsdelivr.net/npm/kpc@0.5.14/dist/](https://cdn.jsdelivr.net/npm/kpc@1.0.0/dist/)
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>kpc-demo</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no" />
+    <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/npm/kpc/dist/kpc.css" />
+    <!-- 将上述kpc.css替换成ksyun.css，可以使用ksyun主题 -->
+    <!-- <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/npm/kpc/dist/ksyun.css" /> -->
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="//cdn.jsdelivr.net/npm/react/umd/react.development.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/react-dom/umd/react-dom.development.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/babel-standalone/babel.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/kpc/dist/kpc.react.js"></script>
+
+    <script type="text/babel">
+        const {Button, Message} = Kpc;
+
+        class Demo extends React.Component {
+            hello() {
+                Message.success('Welcome to the world of Kpc and React!');
+            }
+
+            render() {
+                return <Button onClick={this.hello.bind(this)}>test</Button>
+            }
+        }
+
+        ReactDOM.render(<Demo />, document.getElementById('app'));
+    </script>
+</body>
+</html>
+```
 
 # Create React App
 
@@ -54,42 +71,24 @@ class App extends React.Component {
 ```shell
 npx create-react-app hello-world
 cd hello-world
-npm install kpc -S
+npm install kpc-react -S
 ```
 
-## 修改配置
+## 修改主题
 
-修改配置之前，我们需要弹出项目的配置文件
+如果你需要修改主题，修改主题之前，我们需要弹出项目的配置文件
 
 ```shell
 npm run eject
 ```
 
-然后修改配置文件`config/webpack.config.js`
-
-```diff
---- a/config/webpack.config.js
-+++ b/config/webpack.config.js
-@@ -265,6 +265,8 @@ module.exports = function(webpackEnv) {
-         // Support React Native Web
-         // https://www.smashingmagazine.com/2016/08/a-glimpse-into-the-future-with-react-native-for-web/
-         'react-native': 'react-native-web',
-+        'kpc': 'kpc/@css',
-+        'intact$': 'intact-react',
-       },
-       plugins: [
-         // Adds support for installing with Plug'n'Play, leading to faster installs and adding
-```
-
-## 修改主题
-
-如果要修改主题，需要安装`stylus`和`stylus-loader`
+并且需要安装`stylus`和`stylus-loader`
 
 ```shell
 npm install stylus stylus-loader -D
 ```
 
-然后修改配置文件`config/webpack.config.js`，让kpc指向`kpc/@stylus`目录，并且加入`stylus-loader`
+然后修改配置文件`config/webpack.config.js`，让kpc指向`kpc-react/@stylus`目录，并且加入`stylus-loader`
 
 ```diff
 --- a/config/webpack.config.js
@@ -115,9 +114,7 @@ npm install stylus stylus-loader -D
          // Support React Native Web
          // https://www.smashingmagazine.com/2016/08/a-glimpse-into-the-future-with-react-native-for-web/
          'react-native': 'react-native-web',
--        'kpc': 'kpc/@css',
-+        'kpc': 'kpc/@stylus',
-         'intact$': 'intact-react',
++        'kpc-react': 'kpc-react/@stylus',
        },
        plugins: [
 @@ -448,6 +450,22 @@ module.exports = function(webpackEnv) {
@@ -135,7 +132,7 @@ npm install stylus stylus-loader -D
 +                  options: {
 +                    'include css': true,
 +                    'resolve url': true,
-+                    'import': '~kpc/styles/themes/ksyun/index.styl',
++                    'import': '~kpc-react/@stylus/styles/themes/ksyun/index.styl',
 +                  },
 +                }
 +              ),
@@ -145,12 +142,13 @@ npm install stylus stylus-loader -D
              // In production, they would get copied to the `build` folder.
 ```
 
+> 如果主题没有生效，请检查`resolve.alias['kpc-react']`是否指向了`kpc-react/@stylus`
+
 # 使用
 
 ```js
 import React from 'react';
-import {Button} from 'kpc/components/button';
-import {Message} from 'kpc/components/message';
+import {Button, Message} from 'kpc-react';
 
 class App extends React.Component {
     hello() {
@@ -162,4 +160,46 @@ class App extends React.Component {
 }
 ```
 
+# 语法说明
+
+文档中语法从`Vdt`到`React的转换规则如下：
+
+| 类别 | intact写法 | react写法 | 说明 |
+| --- | --- | --- | --- |
+| 事件 | `ev-click` | `onClick` | 保留React事件命名风格，`on` + 事件名首字母大写 |
+| 默认事件 | `ev-$change:value` | `on$change-value` | React属性名不支持冒号(:)，改为连字符(-)即可 |
+| 事件回调传参 | `ev-click={{ self.onClick.bind(self, data) }}` | `onClick={this.onClick.bind(this, data)}` | - |
+| 属性 | `name={{ self.get('name') }}` | `name={this.state.name}` | - |
+| block | `<Dialog><b:header><div>header</div></b:header></Dialog>` | `<Dialog b-header={<div>header</div>} />` | `b:header`block对应React的属性`b-header` |
+| block parent() | `<b:header>{{ parent() }}header</b:header>` | 不支持引用父组件定义的内容 | - |
+| 带参数的block | `<Transfer><b:label params="data"><div>{{ data.name }}</div></b:label></Transfer>` | `<Transfer b-label={(data) => <div>{data.name}</div>} />` | `b-lablel`属性值为函数 |
+| 双向绑定任意属性 `@since intact-vue@0.3.7` | `v-model:name="name"` | `on$change-name={(c, v) => this.setState({name: v})} name={this.state.name}` | React不支持`v-model`语法糖，改为属性和事件的方式即可 |
+
+另外当需要将vNode作为属性传给kpc组件时，需要使用`Intact.normalize()`方法处理vNode
+
+> 如果是作为子元素`children`，则没有必要`normalize`，因为组件默认会normalize子元素
+
+```js
+import React from 'react';
+import Intact from 'intact';
+import {Badge} from 'kpc-react';
+
+class App extends React.Component {
+    render() {
+        return (
+            // 作为属性，需要normalize
+            <Badge text={Intact.normalize(<i>test</i>)}>
+                <div>test</div>
+            </Badge>
+        )
+    }
+}
+```
+
+> `Table`组件的`scheme`属性中`template`字段返回的vNode无需`normalize`，因为组件内部做了兼容，
+> 不过多次调用`normalize`也没有问题。
+
 [1]: https://github.com/ksc-fe/intact-react
+[2]: https://webpack.js.org/
+[3]: https://babeljs.io/
+[4]: https://reactjs.org/

@@ -16,6 +16,8 @@ export default function addStaticMethods(Dialog) {
                 hideIcon: false,
                 hideFooter: false,
                 showClose: false,
+
+                _title: undefined,
             };
         }
     }
@@ -30,12 +32,21 @@ export default function addStaticMethods(Dialog) {
             dialog.on('cancel', () => {
                 reject();
             });
+            // if press esc, treat it as cancel too
+            dialog.on('terminate', () => {
+                reject();
+            });
         });
     }
 
     ['success', 'warning', 'error', 'confirm'].forEach(type => {
         Dialog[type] = (options = {}) => {
             options = {...options, type};
+            if (options.title) {
+                options._title = options.title;
+                delete options.title;
+            }
+            options.closable = options.escClosable = type === 'confirm';
             return show(options);
         }
     });

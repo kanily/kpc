@@ -27,6 +27,7 @@ for type, value in $origins
     .c-slide{type}-appear-active
         transform-origin value 
         transition opacity $transition, transform $transition !important
+        pointer-events none
 
 .c-fade-enter
 .c-fade-leave
@@ -47,6 +48,8 @@ for type, value in $origins
 .c-expand-leave-active
     transition all $transition
     overflow hidden
+.c-expand-move
+    transition transform $transition
 
 .c-dropdown-enter
 .c-dropdown-leave

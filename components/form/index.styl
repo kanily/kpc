@@ -6,13 +6,19 @@
 .k-form-item
     display table 
     position relative
-    // width 100%
+    table-layout fixed
+    // fluid
+    &.k-fluid
+        width 100%
     > .k-label
         display table-cell
         width $form-item-label-width 
         text-align $form-item-label-text-align 
         padding-right $form-item-label-padding-right 
         line-height $form-item-label-line-height
+        > .k-star
+            color $form-item-star-color 
+            margin-right $form-item-star-margin-right 
     > .k-content
         display table-cell
         vertical-align middle
@@ -44,6 +50,9 @@
     .k-form-item
         display block 
         width auto
+        // maybe has `append`
+        // .k-content
+        //    display block
 
     // append
     > .k-append

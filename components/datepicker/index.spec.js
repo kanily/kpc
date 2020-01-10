@@ -4,17 +4,19 @@ import MultipleDemo from '~/components/datepicker/demos/multiple';
 import DatetimeDemo from '~/components/datepicker/demos/datetime';
 import YearMonthDemo from '~/components/datepicker/demos/yearMonth';
 import RangeDemo from '~/components/datepicker/demos/range';
-import {mount, unmount, dispatchEvent, getElement} from 'test/utils';
+import FormatDemo from '~/components/datepicker/demos/format';
+import MaxMinDemo from '~/components/datepicker/demos/maxMin';
+import {mount, unmount, dispatchEvent, getElement, wait} from 'test/utils';
+import Intact from 'intact';
+import Datepicker from 'kpc/components/datepicker';
+import dayjs from 'dayjs';
 
 describe('Datepicker', () => {
     let instance;
 
-    afterEach(() => {
+    afterEach(async () => {
         unmount(instance);
-        const content = getElement('.k-datepicker-content')
-        if (content) {
-            content.parentNode.removeChild(content);
-        }
+        await wait(400);
     });
 
     it('should select date', () => {
@@ -27,7 +29,7 @@ describe('Datepicker', () => {
         expect(instance.get('date')).to.be.string;
     });
 
-    it('year and month picker', () => {
+    it('year and month picker', async () => {
         instance = mount(YearMonthDemo);
 
         const now = new Date();
@@ -44,7 +46,7 @@ describe('Datepicker', () => {
         nextYearDom.click();
         expect(instance.get('year') - 1).eql(year);
         prevYearDom.click();
-        expect(instance.get('year') + 0).eql(year);
+        expect(+instance.get('year')).eql(year);
 
         // month
         monthInput.click();
@@ -55,6 +57,12 @@ describe('Datepicker', () => {
         const [_year, _month] = instance.get('month').split('-');
         expect(_year - 1).eql(year);
         expect(_month - 1).eql((month + 1) % 12);
+
+        // click confirm button
+        const btn = content.querySelector('.k-footer .k-btn');
+        btn.click();
+        await wait(500);
+        expect(getElement('.k-datepicker-content')).to.be.undefined;
     });
 
     it('should change year and month', () => {
@@ -117,7 +125,20 @@ describe('Datepicker', () => {
         expect(instance.get('date') === undefined).be.true;
     });
 
-    it('multiple select', (done) => {
+    it('should clear datetime', () => {
+        instance = mount(DatetimeDemo);
+
+        const input = instance.element.querySelector('.k-input');
+        input.click();
+        const content = getElement('.k-datepicker-content');
+        // change to time panel
+        content.querySelector('.k-day').click();
+        // clear the value
+        dispatchEvent(instance.element.querySelector('.k-clear'), 'click');
+        expect(instance.get('datetime1') === undefined).be.true;
+    });
+
+    it('multiple select', async () => {
         instance = mount(MultipleDemo);
 
         dispatchEvent(instance.element.children[0].children[0], 'click');
@@ -134,61 +155,48 @@ describe('Datepicker', () => {
         // change to date panel again
         const [tab1, tab2] = content.querySelectorAll('.k-tab');
         tab1.click();
-        setTimeout(() => {
-            content.querySelector('.k-day:nth-child(2)').click();
-            expect(instance.get('datetime')).have.lengthOf(2);
+        await wait(0);
+        content.querySelector('.k-day:nth-child(2)').click();
+        expect(instance.get('datetime')).have.lengthOf(2);
 
-            // also change time after changing tabs
-            tab1.click();
-            setTimeout(() => {
-                tab2.click();
-                setTimeout(() => {
-                    content.querySelector('.k-scroll-item').click();
-                    expect(instance.get('datetime')).have.lengthOf(2);
-                    done();
-                });
-            });
-        });
+        // also change time after changing tabs
+        tab1.click();
+        await wait(0);
+        tab2.click();
+        await wait(0);
+        content.querySelector('.k-scroll-item').click();
+        expect(instance.get('datetime')).have.lengthOf(2);
     });
 
-    it('datetime picker', (done) => {
+    it('datetime picker', async () => {
         instance = mount(DatetimeDemo);
 
         dispatchEvent(instance.element.children[0].children[0], 'click');
-        let content = document.querySelectorAll('.k-datepicker-content');
-        content = content[content.length - 1];
+        let content = getElement('.k-datepicker-content');
        
         dispatchEvent(content.querySelector('.k-day'), 'click');
-        setTimeout(() => {
-            dispatchEvent(content.querySelector('.k-scroll-item'), 'click');
+        await wait(0);
+        dispatchEvent(content.querySelector('.k-scroll-item'), 'click');
 
-            expect(instance.get('datetime1').split(' ')[1]).eql('15:00:00');
-
-            done();
-        });
+        expect(instance.get('datetime1').split(' ')[1]).eql('15:00:00');
     });
 
-    it('should disable some time pickers', (done) => {
+    it('should disable some time pickers', async () => {
         instance = mount(DatetimeDemo);
 
         dispatchEvent(instance.element.children[1].children[0], 'click');
-        let content = document.querySelectorAll('.k-datepicker-content');
-        content = content[content.length - 1];
+        let content = getElement('.k-datepicker-content');
        
         dispatchEvent(content.querySelector('.k-day'), 'click');
-        setTimeout(() => {
-            dispatchEvent(content.querySelector('.k-col:nth-child(2) .k-scroll-item'), 'click');
+        await wait(500);
+        dispatchEvent(content.querySelector('.k-col:nth-child(2) .k-scroll-item'), 'click');
 
-            expect(instance.get('datetime2').split(' ')[1]).eql('00:00:00');
-            expect(content.querySelector('.k-scroll-select-group').innerHTML).to.matchSnapshot();
-
-            done();
-        });
+        expect(instance.get('datetime2').split(' ')[1]).eql('00:00:00');
+        expect(content.querySelector('.k-scroll-select-group').innerHTML).to.matchSnapshot();
     });
     
     it('range', () => {
         instance = mount(RangeDemo);
-
 
         // date
         const [input1] = instance.element.querySelectorAll('.k-input');
@@ -207,25 +215,27 @@ describe('Datepicker', () => {
         expect(value).have.lengthOf(2);
         expect(value[0] < value[1]).to.be.true;
 
-        // cancel one of the range value and re-select it
+        // select the same date
         input1.click();
         content = getElement('.k-datepicker-content');
         // select the middle date
         first = content.querySelectorAll('.k-day')[17];
         first.click();
         first.click();
-        expect(instance.get('date')).eql(value);
+        value = instance.get('date');
+        expect(value).have.lengthOf(2);
+        expect(value[0]).eql(value[1]);
 
         // cancel all of range values and re-select
-        input1.click();
-        content = getElement('.k-datepicker-content');
-        // select the middle date
-        first = content.querySelectorAll('.k-day')[17];
-        first.click();
-        first.previousElementSibling.previousElementSibling.click();
-        first.click();
-        first.previousElementSibling.previousElementSibling.click();
-        expect(instance.get('date')).eql(value);
+        // input1.click();
+        // content = getElement('.k-datepicker-content');
+        // // select the middle date
+        // first = content.querySelectorAll('.k-day')[17];
+        // first.click();
+        // first.previousElementSibling.previousElementSibling.click();
+        // first.click();
+        // first.previousElementSibling.previousElementSibling.click();
+        // expect(instance.get('date')).eql(value);
 
         // range cross months
         input1.click();
@@ -302,9 +312,89 @@ describe('Datepicker', () => {
 
         // again
         input.click();
-        dispatchEvent(input, 'keydown', {keyCode: 40});
+        // dispatchEvent(input, 'keydown', {keyCode: 40});
+        dispatchEvent(input, 'keydown', {keyCode: 38});
         dispatchEvent(input, 'keydown', {keyCode: 13});
         dispatchEvent(input, 'keydown', {keyCode: 13});
-        expect(instance.get('date')).eql(value);
+        const _value = instance.get('date');
+        expect(_value[0]).eql(_value[1]);
+        expect(_value[0]).eql(value[0]);
+    });
+
+    it('should not trigger change event when select range value has not complete', () => {
+        const fn = sinon.spy();
+        class Demo extends Intact {
+            @Intact.template()
+            static template = `<Datepicker v-model="value"
+                ev-$change:value={{ self._onChange }}
+                range
+            />`;
+            defaults() {
+                return { value: [] };
+            }
+            _init() { this.Datepicker = Datepicker; }
+            _onChange() { fn(); }
+        }        
+        instance = mount(Demo);
+        const input = instance.element.querySelector('.k-input');
+        input.click();
+        const content = getElement('.k-datepicker-content');
+        const [calendar1, calendar2] = content.querySelectorAll('.k-calendar-wrapper');
+        const first = calendar1.querySelectorAll('.k-day')[17];
+        const second = calendar2.querySelectorAll('.k-day')[17];
+        first.click();
+        expect(fn.callCount).to.eql(0);
+        second.click();
+        expect(fn.callCount).to.eql(1);
+    });
+
+    it('format', () => {
+        instance = mount(FormatDemo);
+
+        const [input1, input2, input3] = instance.element.querySelectorAll('.k-input');
+        input1.click();
+        let content = getElement('.k-datepicker-content');
+        content.querySelector('.k-today').click();
+        expect(instance.get('date1')).to.eql(dayjs().format('MM/DD/YYYY'));
+        expect(input1.innerHTML).to.matchSnapshot();
+
+        input2.click();
+        content = getElement('.k-datepicker-content');
+        content.querySelector('.k-today').click();
+        expect(instance.get('date2')).to.eql(dayjs().format('YYYY-MM-DD'));
+        expect(input2.innerHTML).to.matchSnapshot();
+
+        input3.click();
+        content = getElement('.k-datepicker-content');
+        content.querySelector('.k-today').click();
+        expect(instance.get('date3')).to.eql(dayjs().format('YYYY-MM-DD') + 'T00:00:00.000Z');
+        expect(input3.innerHTML).to.matchSnapshot();
+    });
+
+    it('sepcify max/min date', () => {
+        instance = mount(MaxMinDemo);
+
+        const now = dayjs().format('YYYY-MM-DD');
+        instance.set('to', now);
+        const element = instance.element.querySelector('.k-inner');
+        element.click();
+        const content = getElement('.k-datepicker-content');
+        const dateDoms = content.querySelectorAll('.k-day:not(.k-disabled)');
+        expect(dateDoms.length).to.eql(1);
+        expect(+dateDoms[0].textContent).to.eql(+now.split('-')[2]);
+    });
+
+    it('should auto select time of the minDate after selecting a date of datetime picker', () => {
+        instance = mount(MaxMinDemo); 
+
+        const date = dayjs().format('YYYY-MM-DD');
+        const time = '01:00:00';
+        const fromTime = `${date} ${time}`;
+        instance.set('fromTime', fromTime);
+        const endTimeTrigger = instance.element.querySelectorAll('.k-inner')[3];
+        endTimeTrigger.click();
+        const content = getElement('.k-datepicker-content');
+        content.querySelector('.k-day:not(.k-disabled)').click();
+        expect(instance.get('toTime')).to.eql(`${date} ${time}`);
     });
 });

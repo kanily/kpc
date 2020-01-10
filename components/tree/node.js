@@ -9,7 +9,7 @@ export default class Node {
         const checkedKeys = tree.checkedKeys;
         let checked = checkedKeys.has(key);
         let needRecheck = false;
-        if (parent) {
+        if (parent && !tree.get('uncorrelated')) {
             if (checked && !parent.checked) {
                 // need look back
                 needRecheck = true;
@@ -55,7 +55,7 @@ export default class Node {
         this.key = key;
         this.children = undefined;
         this.tree = tree;
-        this.loaded = undefined;
+        this.loaded = data.loaded === undefined && data.children && data.children.length ? true : data.loaded;
         this.filter = true;
     }
 
@@ -65,6 +65,8 @@ export default class Node {
 
         this.tree._updateCheckedKeys(this);
         
+        if (this.tree.get('uncorrelated')) return;
+
         const children = this.children;
         if (children) {
             for (let i = 0; i < children.length; i++) {
@@ -77,6 +79,8 @@ export default class Node {
     }
 
     updateUpward() {
+        if (this.tree.get('uncorrelated')) return;
+
         const parent = this.parent;
         if (!parent || parent === this.tree.root) return;
 
@@ -131,10 +135,41 @@ export default class Node {
         this.tree.update();
     }
 
-    remove() {
+    remove(noUpdate) {
         const siblings = this.parent.children;
-        siblings.splice(siblings.indexOf(this), 1);
+        const index = siblings.indexOf(this);
+
+        if (!~index) {
+            return;
+        }
+        siblings.splice(index, 1);
+
+        if (noUpdate) return;
         this.updateUpward();
+        this.tree.update();
+    }
+
+    _insert(node, index) {
+        const siblings = node.parent.children;
+        siblings.splice(siblings.indexOf(node) + index, 0, this);
+        this.parent = node.parent;
+        this.updateUpward();
+        this.tree.update();
+    }
+
+    insertBefore(node) {
+        this._insert(node, 0);
+    }
+
+    insertAfter(node) {
+        this._insert(node, 1);
+    }
+
+    appendTo(node) {
+        this.parent = node;
+        const children = node.children || (node.children = []);
+        children.push(this);
+        this.tree.expand(node.key, false);
         this.tree.update();
     }
 }

@@ -1,5 +1,6 @@
 const webpack = require('webpack');
 const path = require('path');
+const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -8,8 +9,6 @@ module.exports = {
         path: path.resolve(__dirname, './.dev'),
         filename: '[name].js',
         publicPath: '/',
-        // hotUpdateChunkFilename: 'hot/hot-update.js',
-        // hotUpdateMainFilename: 'hot/hot-update.json',
     },
     module: {
         rules: [
@@ -45,13 +44,12 @@ module.exports = {
             },
             // don't change the order of the stylus loader
             {
-                test: /\.(styl|css)$/,
+                test: /\.styl$/,
                 use: [
                     {
                         loader: 'css-loader', 
                         options: {
                             url: true,
-                            minimize: isProduction,
                             // sourceMap: !isProduction,
                         }
                     },
@@ -73,6 +71,25 @@ module.exports = {
                 ]
             },
             {
+                test: /\.css$/,
+                use: [
+                    {
+                        loader: 'css-loader', 
+                        options: {
+                            url: true,
+                            // minimize: isProduction,
+                            // sourceMap: !isProduction,
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        // options: {
+                            // sourceMap: !isProduction,
+                        // }
+                    },
+                ]
+            },
+            {
                 test: /\.(woff2?|eot|ttf|otf|svg|jpg|png)(\?.*)?$/,
                 use: [
                     {
@@ -80,6 +97,17 @@ module.exports = {
                         options: {
                             outputPath: 'fonts/',
                             name: '[name].[ext]',
+                        }
+                    }
+                ]
+            },
+            {
+                test: /\.gif$/,
+                use: [
+                    {
+                        loader: 'url-loader',
+                        options: {
+                            limit: 100000
                         }
                     }
                 ]
@@ -95,6 +123,24 @@ module.exports = {
                     }
                 ]
             },
+            // monaco-editor exists es6 syntax: `const`
+            {
+                test: /\.js$/,
+                include: [
+                    path.resolve(__dirname, './node_modules/monaco-editor/esm/vs/language/typescript/lib/typescriptServices.js'),
+                    path.resolve(__dirname, './node_modules/monaco-editor/esm/vs/language/html/_deps/vscode-html-languageservice/beautify/beautify-css.js'),
+                ],
+                use: [
+                    {
+                        loader: 'string-replace-loader',
+                        options: {
+                            search: 'export const ',
+                            replace: 'export var ',
+                            flags: 'g',
+                        }
+                    }
+                ]
+            },
         ]
     },
     resolve: {
@@ -106,6 +152,8 @@ module.exports = {
             'intact$': 'intact-vue',
             'kpc$': path.resolve(__dirname, 'index.js'),
             'kpc': path.resolve(__dirname),
+            'kpc-vue': path.resolve(__dirname),
+            'kpc-react': path.resolve(__dirname),
             '@babel/runtime-corejs2/helpers/inheritsLoose': path.resolve(__dirname, 'inheritsLoose.js'),
         },
         extensions: ['.mjs', '.js', '.vdt', '.json'],
@@ -119,5 +167,6 @@ module.exports = {
         new webpack.DefinePlugin({
             'process.ssr': true,
         }),
+        new MonacoWebpackPlugin(),
     ],
 };

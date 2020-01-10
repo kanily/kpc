@@ -17,28 +17,28 @@ The above is a simple `Table`, you can specify the table data to be displayed th
 ```vdt
 import {Table, TableColumn} from 'kpc/components/table';
 
-const scheme = {a: 'header 1', b: 'header 2'};
-const data = [{a: 'first row', b: 'content 1'}, {a: 'second row', b: 'content 2'}];
+const scheme = {a: '表头1', b: '表头2'};
+const data = [{a: '第一行', b: '哈哈2'}, {a: '第二行', b: '哈哈2'}];
 
 <div>
     <Table scheme={{ scheme }} data={{ data }} resizable ref="__test" />
-    <Table data={{ data }} resizable >
-        <TableColumn key="a" title="header 1" />
-        <TableColumn key="b" title="header 2" />
+    <Table data={{ data }} resizable>
+        <TableColumn key="a" title="表头1" />
+        <TableColumn key="b" title="表头2" />
     </Table>
 </div>
 ```
 
 ```styl
-.k-table-wrapper
+.k-table
     margin-bottom 20px
 ```
 
 ```vue-data
 data() {
     return {
-        scheme: {a: 'header 1', b: 'header 2'},
-        data: [{a: 'first row', b: 'content 1'}, {a: 'second row', b: 'content 2'}],
+        scheme: {a: '表头1', b: '表头2'},
+        data: [{a: '第一行', b: '哈哈2'}, {a: '第二行', b: '哈哈2'}],
     }
 },
 ```

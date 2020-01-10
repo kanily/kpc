@@ -9,17 +9,28 @@ order: 4
 
 通过`current`可以指定当前页码，当页码改变时，会触发默认事件`$change:current`和`$changed:current`，我们可以指定相应的回调函数。
 
+如果同时改变组件的`current`和`limit`，可以通过绑定`change`事件来处理逻辑，它在两者同时改变时
+只会触发一次
+
 ## en-US
 
 The current page number can be specified by `current`. When the page number changes, the default events `$change:current` and `$changed:current` are triggered. We can specify the corresponding callback function.
+
+
 
 ```vdt
 import Pagination from 'kpc/components/pagination';
 
 <div>
-    <Pagination total={{ 200 }}
-        current={{ self.get('current') }}
-        ev-$change:current={{ self._fetch }}
+    <Pagination total={{ 200 }} 
+        current={{ self.get('current1') }}
+        ev-$change:current={{ self._fetch1 }} 
+    />
+    <br /><br />
+    <Pagination total={{ 200 }} 
+        v-model:current="current2"
+        v-model:limit="limit"
+        ev-change={{ self._fetch2 }}
     />
 </div>
 ```
@@ -32,13 +43,21 @@ export default class extends Intact {
     static template = template;
 
     defaults() {
-        return {current: 1}
+        return {
+            current1: 1, 
+            current2: 1,
+            limit: 20
+        }
     };
 
-    _fetch(c, current) {
+    _fetch1(c, current) {
         // fetch data
-        this.set('current', current);
+        this.set('current1', current);
         Message.info(`current page: ${current}`);
+    }
+
+    _fetch2({current, limit}) {
+        Message.info(`current page: ${current}, limit: ${limit}`);
     }
 }
 ```

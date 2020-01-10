@@ -1,8 +1,9 @@
 import Button from '../button';
+import {getRestProps} from '../utils';
 
 const {
     value, children, _value, className,
-    disabled, _parent, closable,
+    disabled, _parent, closable
 } = self.get();
 
 <div 
@@ -12,9 +13,10 @@ const {
         [className]: className,
         'k-disabled': disabled,
     } }}
+    {{ ...getRestProps(self) }}
     ev-click={{ self._changeTab }}
 >
-    {{ self.get('children') }}
+    {{ children }}
     <Button type="none"
         icon
         disabled={{ disabled }} 

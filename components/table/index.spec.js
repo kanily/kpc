@@ -6,7 +6,11 @@ import GroupDemo from '~/components/table/demos/group';
 import FixColumnDemo from '~/components/table/demos/fixColumn';
 import LoadingDemo from '~/components/table/demos/loading';
 import ExportDemo from '~/components/table/demos/export';
-import {mount, unmount, dispatchEvent, getElement} from 'test/utils';
+import SelectedKeysDemo from '~/components/table/demos/selectedKeys';
+import ResizableDemo from '~/components/table/demos/resizable';
+import TooltipDemo from '~/components/table/demos/tooltip';
+import TreeDemo from '~/components/table/demos/tree';
+import {mount, unmount, dispatchEvent, getElement, wait} from 'test/utils';
 
 describe('Table', () => {
     let instance;
@@ -16,6 +20,10 @@ describe('Table', () => {
     it('check & uncheck', () => {
         instance = mount(BasicDemo);
         const table = instance.refs.__test;
+
+        // bind $change:checked event
+        const spy = sinon.spy((c, v) => console.log(v));
+        table.on('$change:checked', spy);
 
         // click row
         const [tr1, tr2] = instance.element.querySelectorAll('.k-tbody tr');
@@ -35,6 +43,12 @@ describe('Table', () => {
         all.click();
         expect(table.isCheckAll()).eql(false);
         expect(table.get('checkedKeys')).deep.eql([]);
+
+        expect(spy.callCount).to.eql(5);
+        // clear data of table should only trigger $change:checked event once, #407
+        all.click();
+        table.set('data', []);
+        expect(spy.callCount).to.eql(7);
     });
 
     it('click row of radio table', () => {
@@ -123,7 +137,7 @@ describe('Table', () => {
         expect(__test2.element.outerHTML).to.matchSnapshot();
     });
 
-    it('fix columns', (done) => {
+    it('fix columns', async () => {
         instance = mount(FixColumnDemo);
 
         const table = instance.refs.__test;
@@ -133,24 +147,19 @@ describe('Table', () => {
 
         // should add k-scroll-middle classname
         table.scroll.scrollLeft = 100;
-        setTimeout(() => {
-            expect(table.element.outerHTML).to.matchSnapshot();
+        await wait(100);
+        expect(table.element.outerHTML).to.matchSnapshot();
 
-            // should add k-scroll-right classname
-            table.scroll.scrollLeft = 1000;
-            setTimeout(() => {
-                expect(table.element.outerHTML).to.matchSnapshot();
+        // should add k-scroll-right classname
+        table.scroll.scrollLeft = 1000;
+        await wait(100);
+        expect(table.element.outerHTML).to.matchSnapshot();
 
-                // scroll vertically
-                table.scroll.scrollTop = 10;
-                setTimeout(() => {
-                    expect(table.element.querySelector('.k-fixed-left .k-tbody').scrollTop).to.eql(10);
-                    expect(table.element.querySelector('.k-fixed-right .k-tbody').scrollTop).to.eql(10);
-
-                    done();
-                }, 100);
-            }, 100);
-        }, 100);
+        // scroll vertically
+        table.scroll.scrollTop = 10;
+        await wait(100);
+        expect(table.element.querySelector('.k-fixed-left .k-tbody').scrollTop).to.eql(10);
+        expect(table.element.querySelector('.k-fixed-right .k-tbody').scrollTop).to.eql(10);
     });
 
     it('resize', () => {
@@ -165,6 +174,38 @@ describe('Table', () => {
         const [head, body] = table.element.querySelectorAll('table');
         expect(head.innerHTML).to.matchSnapshot();
         expect(body.innerHTML).to.matchSnapshot();
+    });
+
+    it('store width on resizing', () => {
+        instance = mount(ResizableDemo);
+    
+        const table = instance.element.querySelector('.k-table');
+        const resize = table.querySelector('.k-resize');
+        dispatchEvent(resize, 'mousedown', {which: 1, clientX: 0});
+        dispatchEvent(document, 'mousemove', {clientX: 1});
+        dispatchEvent(document, 'mouseup');
+
+        // rerender
+        unmount(instance);
+        instance = mount(ResizableDemo);
+        const _table = instance.element.querySelector('.k-table');
+        expect(_table.innerHTML).to.matchSnapshot();
+        localStorage.removeItem('resizableTable');
+    });
+
+    it('should set the width of table equal to container after resizing and expanding container', async () => {
+        instance = mount(BasicDemo);
+
+        const table = instance.element.querySelector('.k-table');
+        const resize = table.querySelector('.k-resize');
+        dispatchEvent(resize, 'mousedown', {which: 1, clientX: 0});
+        dispatchEvent(document, 'mousemove', {clientX: 1});
+        dispatchEvent(document, 'mouseup');
+
+        const container = instance.element.parentNode;
+        container.style.width = '1000px';
+        await wait(200);
+        expect(table.innerHTML).to.matchSnapshot();
     });
 
     it('loading', () => {
@@ -186,5 +227,54 @@ describe('Table', () => {
             {a: '1', b: 2, c: 3}
         ]);
         expect(content1.replace(/\r\n|\r/g, '\n')).to.matchSnapshot();
+    });
+
+    it('selectedKeys', () => {
+        instance = mount(SelectedKeysDemo);
+
+        const [table1, table2] = instance.element.querySelectorAll('.k-tbody');
+        const [tr1, tr2] = table1.querySelectorAll('tr');
+        tr1.click();
+        expect(table1.innerHTML).to.matchSnapshot();
+        tr2.click();
+        expect(table1.innerHTML).to.matchSnapshot();
+        expect(instance.refs.__test1.getSelectedData()).to.have.lengthOf(1);
+        tr2.click();
+        expect(table1.innerHTML).to.matchSnapshot();
+        expect(instance.refs.__test1.getSelectedData()).to.have.lengthOf(0);
+
+        const [tr21, tr22] = table2.querySelectorAll('tr');
+        tr21.click();
+        expect(table2.innerHTML).to.matchSnapshot();
+        tr22.click();
+        expect(table2.innerHTML).to.matchSnapshot();
+        expect(instance.refs.__test2.getSelectedData()).to.have.lengthOf(2);
+        tr22.click();
+        expect(table2.innerHTML).to.matchSnapshot();
+        expect(instance.refs.__test2.getSelectedData()).to.have.lengthOf(1);
+    });
+
+    it('tooltip', () => {
+        instance = mount(TooltipDemo);
+
+        const tr = instance.element.querySelector('tbody tr');
+        dispatchEvent(tr, 'mouseenter');
+        const content = getElement('.k-tooltip-content');
+        expect(content.textContent).to.matchSnapshot();
+    });
+
+    it('tree', () => {
+        instance = mount(TreeDemo);
+
+        // check all
+        const checkbox = instance.element.querySelector('.k-checkbox');
+        checkbox.click();
+        expect(instance.innerHTML).to.matchSnapshot();
+
+        const arrow = instance.element.querySelector('.k-table-arrow');
+        arrow.click();
+        expect(instance.innerHTML).to.matchSnapshot();
+        arrow.click();
+        expect(instance.innerHTML).to.matchSnapshot();
     });
 });

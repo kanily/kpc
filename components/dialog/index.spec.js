@@ -1,15 +1,17 @@
 import Intact from 'intact';
 import Dialog from 'kpc/components/dialog';
-import {getElement, render, mount, unmount, dispatchEvent} from 'test/utils';
+import {getElement, render, mount, unmount, dispatchEvent, wait} from 'test/utils';
 import BasicDemo from '~/components/dialog/demos/basic'; 
 import AsyncCloseDemo from '~/components/dialog/demos/asyncClose';
 import AsyncOpenDemo from '~/components/dialog/demos/asyncOpen';
+import TerminateDemo from '~/components/dialog/demos/terminate';
+import HideDemo from '~/components/dialog/demos/hide';
 
 describe('Dialog', () => {
     let component;
     let instance;
 
-    afterEach(() => {
+    afterEach((done) => {
         component && component.destroy();
         component = null;
 
@@ -17,6 +19,7 @@ describe('Dialog', () => {
             unmount(instance);
             instance = null;
         }
+        setTimeout(done, 400);
     });
 
     it('should render dialog correctly', () => {
@@ -138,7 +141,7 @@ describe('Dialog', () => {
         expect(instance.get('show')).be.false;
     });
 
-    it('should remove when parent destoryed for using as component', function(done) {
+    it('should remove when parent destroyed for using as component', function(done) {
         this.enableTimeouts(false);
 
         let wrapper;
@@ -188,7 +191,7 @@ describe('Dialog', () => {
             const Demo = req(item).default;
             const i = mount(Demo);
 
-            dispatchEvent(i.element.firstChild, 'click');
+            dispatchEvent(i.element.querySelector('.k-btn') || i.element, 'click');
             expect(getElement('.k-dialog').innerHTML).to.matchSnapshot();
             unmount(i);
         });
@@ -205,7 +208,7 @@ describe('Dialog', () => {
         expect(dialog.innerHTML).to.matchSnapshot();
     });
 
-    it('async open', function(done) {
+    it('async open', async function() {
         this.enableTimeouts(false);
 
         instance = mount(AsyncOpenDemo);
@@ -213,13 +216,11 @@ describe('Dialog', () => {
         dispatchEvent(instance.element.firstChild, 'click');
         expect(instance.dialog.element === undefined).to.be.true;
 
-        setTimeout(() => {
-            const dialog = getElement('.k-dialog');
-            expect(dialog.innerHTML).to.matchSnapshot();
-            // close
-            dispatchEvent(dialog.querySelector('.k-footer .k-btn'), 'click');
-            done();
-        }, 3000);
+        await wait(3000);
+        const dialog = getElement('.k-dialog');
+        expect(dialog.innerHTML).to.matchSnapshot();
+        // close
+        dispatchEvent(dialog.querySelector('.k-footer .k-btn'), 'click');
     });
 
     it('drag', () => {
@@ -236,7 +237,7 @@ describe('Dialog', () => {
         expect(dialog.getAttribute('style')).include('left');
     });
 
-    it('static methods', (done) => {
+    it('static methods', async () => {
         let cb = sinon.spy();
         Dialog.success({content: 'test'}).then(cb);
 
@@ -244,21 +245,51 @@ describe('Dialog', () => {
         expect(dialog.innerHTML).to.matchSnapshot();
         dialog.querySelector('.k-btn').click();
         // remove immediately for next test
-        document.body.removeChild(dialog.parentElement);
-        setTimeout(() => {
-            expect(cb.callCount).to.eql(1);
+        // it has been removed
+        // document.body.removeChild(dialog.parentElement);
+        await wait(0);
+        expect(cb.callCount).to.eql(1);
 
-            let cb1 = sinon.spy();
-            Dialog.confirm({content: 'test', hideIcon: true, showClose: true}).then(cb, cb1)
-            dialog = getElement('.k-dialog');
-            expect(dialog.innerHTML).to.matchSnapshot();
-            dialog.querySelector('.k-footer .k-btn').click();
-            document.body.removeChild(dialog.parentElement);
-            setTimeout(() => {
-                expect(cb1.callCount).to.eql(1);
+        let cb1 = sinon.spy();
+        Dialog.confirm({content: 'test', hideIcon: true, showClose: true}).then(cb, cb1)
+        dialog = getElement('.k-dialog');
+        expect(dialog.innerHTML).to.matchSnapshot();
+        dialog.querySelector('.k-footer .k-btn').click();
+        await wait(0);
+        expect(cb1.callCount).to.eql(1);
 
-                done();
-            });
-        });
-    })
+        // with title
+        Dialog.error({title: 'error', content: 'test'});
+        dialog = getElement('.k-dialog');
+        expect(dialog.innerHTML).to.matchSnapshot();
+        dialog.querySelector('.k-btn').click();
+    });
+
+    it('should double check for closing dialog', async () => {
+        instance = mount(TerminateDemo);
+
+        instance.element.firstChild.click();
+        const dialog = getElement('.k-dialog');
+        dialog.querySelector('.k-close').click();
+        await wait(500);
+        expect(dialog.parentNode).not.be.null;
+        const confirm = getElement('.k-alert-dialog');
+        confirm.querySelector('.k-ok').click();
+        await wait(500);
+        expect(dialog.parentNode).be.null;
+    });
+
+    it('should only hide body', async () => {
+        instance = mount(HideDemo);
+
+        expect(instance.refs.__demo.$element.innerHTML).to.matchSnapshot();
+        instance.set('show', true);
+        await wait(500);
+        const dialog = getElement('.k-dialog');
+        expect(dialog.innerHTML).to.matchSnapshot();
+
+        instance.set('show', false);
+        await wait(500);
+        expect(instance.refs.__demo.$element.innerHTML).to.matchSnapshot();
+    });
 });

@@ -19,9 +19,16 @@ A complete menu is required `Dropdown`, `DropdownMenu` and `DropdownItem` three 
 `Dropdown` will use the first child element as the trigger element, and the second element as 
 the `DropdownMenu` menu.
 
-> Like the `Tooltip` component, the `Dropdown` component will return two elements (trigger and menu) 
-> instead of wrapping them as an element in `Intact`, so don't use it as the top-level element of the 
-> template, for example, in this case, you should use `<div>` to wrap it to return in template.
+> `@since 0.9.0` `Dropdown`在`Vue/React`下渲染不会被元素包裹，这可能会影响你之前项目中定义的样式，
+> 如需渲染包裹元素，请做如下配置
+> ```js
+> // @code 
+> import {configure} from 'kpc/components/utils';
+>
+> // 该配置全局生效
+> configure({useWrapper: true});
+> ```
+
 
 ```vdt
 import {Dropdown, DropdownMenu, DropdownItem} from 'kpc/components/dropdown';

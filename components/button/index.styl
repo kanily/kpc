@@ -11,7 +11,7 @@ sizes = large small mini
     // line-height s('calc(%s - 2px)', $btn-height)
     padding $btn-padding
     outline none
-    border none
+    // border none
     vertical-align middle
     color $btn-color
     background-color $btn-bg-color
@@ -42,6 +42,20 @@ sizes = large small mini
             &:active
                 background-color palette(@background-color, 1)
                 border-color palette(@border-color, 1) 
+    // secodary type
+    &.k-secondary
+        color $btn-secondary-color
+        border-color $btn-secondary-border-color
+        &:hover
+        &:focus
+            background-color $btn-secondary-hover-bg-color
+        &:active
+            background-color $btn-secondary-active-bg-color
+    &.k-link
+        color $link-color
+        &:hover
+            color $link-hover-color
+
     // disabled
     &.k-disabled
         &, &:hover
@@ -50,8 +64,9 @@ sizes = large small mini
             border-color $btn-disabled-border-color 
             cursor not-allowed
 
-    // none
+    // none & link
     &.k-none
+    &.k-link
         &, &:hover
             border none
             background-color transparent
@@ -142,6 +157,39 @@ sizes = large small mini
         // it will cause icon can not vertical align middle with text 
         // .k-icon
         //     line-height inherit
+
+    // ghost
+    &.k-ghost
+        background transparent
+        color $btn-ghost-color
+        &:hover
+        &:active
+            background transparent
+        &:hover
+            color $btn-ghost-hover-color
+        &:active
+            color $primary-color
+        &.k-default
+            border-color $btn-default-ghost-border-color
+            &:hover
+                border-color $btn-default-ghost-hover-border-color
+            &:active
+                border-color $primary-color
+        for type in types
+            &.k-{type}
+                color lookup('$btn-' + type + '-ghost-color')
+                &:hover
+                    color palette(@color, -1)
+                    border-color palette(@color, -1)
+                &:active
+                    color palette(@color, 1) 
+                    border-color palette(@color, 1)
+        // disabled
+        &.k-disabled
+            &, &:hover
+                color $btn-disabled-color 
+                border-color $btn-disabled-ghost-border-color 
+                background-color transparent
 
 // buttons
 .k-btns

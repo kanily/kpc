@@ -2,20 +2,29 @@ import Button from '../button';
 import MoveWrapper from '../moveWrapper';
 import {_$} from '../utils';
 
-const {size} = self.get();
+const {size, container, hideClose, overlay, value, width, mode} = self.get();
 
-<MoveWrapper autoDestroy={{ false }} ev-appended={{ self._onAppended }}>
-    <div class={{ {
-        "k-dialog-wrapper": true,
-        [self.get('className')]: self.get('className'),
-        [scope.className]: scope.className,
-    } }} ref={{ dom => self.$element = dom }}>
+const isHide = mode === 'hide';
+
+<MoveWrapper autoDestroy={{ false }} ev-appended={{ self._onAppended }}
+    container={{ container }}
+>
+    <div 
+        class={{ {
+            "k-dialog-wrapper": true,
+            [self.get('className')]: self.get('className'),
+            [scope.className]: scope.className,
+        } }} 
+        ref={{ dom => self.$element = dom }}
+    >
         <b:overlay>
             <Animate class="k-overlay"
-                v-if={{ self.get('value') }}
+                a:show={{ overlay ? value : false }} 
+                v-if={{ isHide ? true : overlay ? value : false }}
                 key="overlay"
                 a:appear
                 a:transition="c-fade"
+                ev-click={{ self._onClickOverlay }}
             ></Animate>
         </b:overlay>
         <Animate 
@@ -25,10 +34,12 @@ const {size} = self.get();
                 [`k-${size}`]: size !== 'default',
             } }}
             ref={{ i => self.dialog = i ? i.element : null }}
-            v-if={{ self.get('value') }}
+            a:show={{ value }}
+            v-if={{ isHide ? true : value }}
             ev-a:leaveEnd={{ self._leaveEnd }}
             a:appear
             key="dialog"
+            style={{ {width: typeof width === 'number' ? `${width}px` : width} }}
         >
             <template>
                 <b:content>
@@ -39,8 +50,8 @@ const {size} = self.get();
                             <span class="k-title">{{ self.get('title') }}</span>
                         </b:header>
                         <Button type="none" icon title={{ _$("关闭") }} class="k-close"
-                            ev-click={{ self.close }}
-                            v-if={{ !scope.hideClose }}
+                            ev-click={{ self._terminate }}
+                            v-if={{ !hideClose && !scope.hideClose }}
                         >
                             <i class="k-icon ion-ios-close-empty"></i>
                         </Button>
@@ -49,8 +60,8 @@ const {size} = self.get();
                     <b:footer-wrapper>
                         <div class="k-footer c-clearfix">
                             <b:footer>
-                                <Button ev-click={{ self.cancel }}>{{ self.get('cancelText') }}</Button>
-                                <Button type="primary" ev-click={{ self.ok }} 
+                                <Button class="k-cancel" ev-click={{ self.cancel }}>{{ self.get('cancelText') }}</Button>
+                                <Button class="k-ok" type="primary" ev-click={{ self.ok }} 
                                     loading={{ self.get('loading') }}
                                     disabled={{ self.get('disabledOk') }}
                                 >{{ self.get('okText') }}</Button>

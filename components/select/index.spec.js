@@ -3,7 +3,11 @@ import DisabledDemo from '~/components/select/demos/disabled';
 import ClearableDemo from '~/components/select/demos/clearable';
 import FilterDemo from '~/components/select/demos/filterable';
 import GroupDemo from '~/components/select/demos/group';
-import {mount, unmount, dispatchEvent, getElement} from 'test/utils';
+import AllowUnmatchDemo from '~/components/select/demos/allowUnmatch';
+import {mount, unmount, dispatchEvent, getElement, wait} from 'test/utils';
+import Tooltip from 'kpc/components/tooltip';
+import Intact from 'intact';
+import {Select, Option} from 'kpc/components/select';
 
 describe('Select', () => {
     let instance;
@@ -115,7 +119,7 @@ describe('Select', () => {
         expect(dropdown2.innerHTML).to.matchSnapshot();
     });
 
-    it('keyboard operations',(done) => {
+    it('keyboard operations', async () => {
         instance = mount(BasicDemo);
 
         const select = instance.element.querySelector('.k-select');
@@ -124,9 +128,39 @@ describe('Select', () => {
         expect(dropdown.innerHTML).to.matchSnapshot();
 
         dispatchEvent(select, 'keydown', {keyCode: 9});
-        setTimeout(() => {
-            expect(dropdown.parentNode).to.eql(null);
-            done();
-        }, 500);
+        await wait(500);
+        expect(dropdown.style.display).to.eql('none');
+    });
+
+    it('no data', async () => {
+        instance = mount(AllowUnmatchDemo);
+
+        const input = instance.element.querySelector('.k-inner');
+        input.value = 'xxx';
+        dispatchEvent(input, 'input');
+        const dropdown = getElement('.k-select-dropdown');
+        expect(dropdown.innerHTML).to.matchSnapshot();
+    });
+
+    it('Tooltip with Select', async () => {
+        class Demo extends Intact {
+            @Intact.template()
+            static template = `<div><Tooltip content="hello">
+                <Select><Option value="1">option 1</Option></Select> 
+            </Tooltip></div>`
+            _init() {
+                this.Tooltip = Tooltip;
+                this.Select = Select;
+                this.Option = Option;
+            }
+        }
+
+        instance = mount(Demo);
+        const wrapper = instance.element.querySelector('.k-wrapper');
+        wrapper.click();
+        wrapper.click();
+
+        expect(getElement('.k-select-dropdown')).to.be.undefined;
+        expect(getElement('.k-tooltip-content')).to.be.undefined;
     });
 });

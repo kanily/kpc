@@ -27,6 +27,13 @@ export default class Select extends Intact {
         container: [Function, String],
         inline: Boolean,
         loading: Boolean,
+        hideIcon: Boolean,
+        position: Object,
+    };
+
+    static events = {
+        keypress: true,
+        keydown: true,
     };
 
     defaults() {
@@ -66,6 +73,8 @@ export default class Select extends Intact {
             container: undefined,
             inline: false,
             loading: false,
+            hideIcon: false,
+            position: {my: 'left top+8', at: 'left bottom'},
 
             _show: false,
             _activeLabel: undefined,
@@ -174,12 +183,14 @@ export default class Select extends Intact {
     }
 
     _onKeypress(e) {
+        this.trigger('keypress', e);
         if (e.keyCode === 13) {
             this.refs.wrapper.click();
         }
     }
 
     _onKeydown(e) {
+        this.trigger('keydown', e);
         if (e.keyCode === 9) { // tab
             this.refs.dropdown.hide();
         }

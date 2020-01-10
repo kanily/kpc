@@ -3,10 +3,11 @@ const webpackConfig = require('../webpack.config.common');
 const merge = require('webpack-merge');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const packageJson = require('../package.json');
+const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
 
 const isDev = process.env.NODE_ENV !== 'production';
-// process.URL_PREFIX = isDev ? '' : '/kpc';
-process.URL_PREFIX = '';
+process.URL_PREFIX = isDev ? '' : '//damife.ks3-cn-beijing.ksyun.com/kpc';
+// process.URL_PREFIX = '';
 
 module.exports = function(theme) {
     // add theme
@@ -40,13 +41,21 @@ module.exports = function(theme) {
                     ]
                 },
                 {
-                    test: /\.(styl|css)$/,
+                    test: /\.styl$/,
                     use: !process.env.THEME && theme !== '__nouse' ?
                         ['css-hot-loader'].concat(ExtractTextPlugin.extract({
                             // the third rule is a stylus rule
                             use: commonConfig.module.rules[2].use,
                         })) :
                         ['style-loader'].concat(commonConfig.module.rules[2].use),
+                },
+                {
+                    test: /\.css$/,
+                    use: !process.env.THEME && theme !== '__nouse' ?
+                        ['css-hot-loader'].concat(ExtractTextPlugin.extract({
+                            use: commonConfig.module.rules[3].use,
+                        })) :
+                        ['style-loader'].concat(commonConfig.module.rules[3].use),
                 },
             ]
         },
@@ -67,6 +76,7 @@ module.exports = function(theme) {
         new webpack.DefinePlugin({
             'process.version': JSON.stringify(packageJson.version),
         }),
+        new MonacoWebpackPlugin(),
     ];
 
     if (!process.env.THEME && theme !== '__nouse') {

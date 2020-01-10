@@ -8,6 +8,8 @@ export default class Cascader extends Select {
     @Intact.template()
     static template = template;
 
+    static blocks = [...Select.blocks, 'format'].filter(Boolean);
+
     defaults() {
         return {
             ...super.defaults(),
@@ -73,6 +75,7 @@ export default class Cascader extends Select {
     handleProps(props, labelObj, level) {
         const {_value, value} = this.get();
         let active = false;
+        let selected = false;
 
         if (Array.isArray(_value)) {
             if (_value[level] === props.value) {
@@ -83,10 +86,11 @@ export default class Cascader extends Select {
         if (Array.isArray(value)) {
             if (value[level] === props.value) {
                 labelObj.values.push(props);
+                selected = true;
             }
         }
 
-        return {active};
+        return {active, selected};
     }
 
     _onSearch(e) {

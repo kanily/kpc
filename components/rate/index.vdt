@@ -1,8 +1,9 @@
 import Icon from '../icon';
+import {getRestProps} from '../utils';
 
 const {
     _value, count, className, 
-    style, disabled, half
+    disabled, half
 } = self.get();
 
 const classNameObj = {
@@ -13,7 +14,7 @@ const classNameObj = {
 
 const icon = <b:icon><Icon class="ion-android-star" /></b:icon>
 
-<div className={{ classNameObj }} style={{ style }}
+<div {{ ...getRestProps(self) }} class={{ classNameObj }}
     ev-mouseleave={{ self.onMouseLeaveComponent }}
 >
     {{ (() => {

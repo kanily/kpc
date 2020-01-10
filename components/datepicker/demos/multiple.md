@@ -17,7 +17,7 @@ Add the `multiple` property to make it support multiple selections of dates.
 import Datepicker from 'kpc/components/datepicker';
 
 <div>
-    <Datepicker multiple v-model="date" />
+    <Datepicker multiple v-model="date" clearable />
     You selected: {{ JSON.stringify(self.get('date')) }}
     <br /><br />
     <Datepicker multiple v-model="datetime" type="datetime" />

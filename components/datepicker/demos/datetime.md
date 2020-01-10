@@ -19,7 +19,7 @@ hour, minute, second selection by adding `disabledDate`, `disabledMinutes`, `dis
 import Datepicker from 'kpc/components/datepicker';
 
 <div>
-    <Datepicker type="datetime" v-model="datetime1" />
+    <Datepicker type="datetime" v-model="datetime1" clearable />
     <Datepicker type="datetime" v-model="datetime2" 
         placeholder="Time accurate to hour"
         disabledMinutes

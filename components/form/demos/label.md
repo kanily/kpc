@@ -7,7 +7,8 @@ order: 3
 
 ## zh-CN
 
-通过`label`扩展点，我们可以定义更复杂的`label`，而不仅仅只是文本
+通过`label`扩展点，我们可以定义更复杂的`label`，而不仅仅只是文本，当`Form`添加了`starOnRequired`属性时，
+必填的`FormItem`标签前面将自动添加`*`
 
 ## en-US
 
@@ -17,13 +18,12 @@ We can define more complex `label`, not just text, by the `label` extension poin
 import {Form, FormItem} from 'kpc/components/form';
 import {Input} from 'kpc/components/input';
 
-<Form>
-    <FormItem>
-        <b:label><i style="color: red">*</i> Name</b:label>
+<Form starOnRequired>
+    <FormItem rules={{ {required: true} }} label="姓名">
         <Input />
     </FormItem>
     <FormItem>
-        <b:label><i class="ion-person"/> Name</b:label>
+        <b:label><i class="ion-person"></i> 姓名</b:label>
         <Input />
     </FormItem>
 </Form>
@@ -38,7 +38,7 @@ import {Input} from 'kpc/components/input';
 ```
 
 ```react-methods
-// inject the current context by _context
+// 注入_context上下文
 static childContextTypes = {
     _context: () => {}
 }

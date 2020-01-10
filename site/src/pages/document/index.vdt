@@ -1,10 +1,8 @@
 import Button from 'components/button';
 import Link from 'components/link';
 import Badge from 'components/badge';
-import {_$} from 'kpc/components/utils';
 
 const Article = self.get('Article');
-const language = Article.language;
 
 let currentNav = {};
 let demos = self.get('demos') || [];
@@ -17,8 +15,10 @@ function Catalog(props) {
         return <li
             class={{ {
                 active: (() => {
-                    const path = self.path + '/';
-                    if (value.url === path) {
+                    const path = self.path.slice(1);
+                    if (value.path.indexOf(path + '/') > -1 ||
+                        value.path.indexOf(path + '.md') > -1
+                    ) {
                         currentNav = value;
                         return true;
                     }
@@ -26,17 +26,17 @@ function Catalog(props) {
             } }}
             v-if={{ !value.disabled }}
         >
-            <Link href={{ `${process.URL_PREFIX}${value.url}` }}>
+            <Link href={{ `/${value.path.replace('.md', '/').replace('index/', '')}` }}>
                 {{ do {
                     const matches = value.path.match(/components\/([^\/]+)/);
                     if (matches) {
                         const name = matches[1];
                         [
                             name[0].toUpperCase() + name.substring(1),
-                            language !== 'en-US' ? <span>{{ value.title }}</span> : undefined,
+                            <span>{{ value.title }}</span>
                         ];
                     } else {
-                        if (value.title === '更新日志' || value.title === 'Change Log') {
+                        if (value.title === '更新日志') {
                             <Badge disabled={{ !!self.get('hasRead') }}>{{ value.title }}</Badge>
                         } else {
                             value.title;
@@ -66,7 +66,7 @@ if (sidebar) {
         if (key !== 'undefined') {
             _sidebar.push({
                 key,
-                value: key !== '组件' || key !== 'Components' ? 
+                value: key !== '组件' ? 
                     sidebar[key] :
                     sidebar[key].sort((a, b) => {
                         return a.path > b.path ? 1 : -1;
@@ -93,15 +93,11 @@ if (sidebar) {
             <div class="article-head">
                 <div class="title">{{ currentNav.title }}</div>
                 <div class="edit-link">
-                    {{ do {
-                        const results = _$('如果你发现文档有问题，请帮忙在%上修正该文档').split('%');
-                        results.splice(1, 0, (
-                            <a target="_blank" 
-                                href={{ `https://github.com/ksc-fe/kpc/blob/master/${currentNav.path}` }}
-                            >github</a>
-                        ));
-                        results
-                    } }}
+                    如果你发现文档有问题，请帮忙在
+                    <a target="_blank" 
+                        href={{ `https://github.com/ksc-fe/kpc/blob/master/${currentNav.path}` }}
+                    >github</a>
+                    上修正该文档
                 </div>
             </div>
             <Article ref="article" />
@@ -109,8 +105,8 @@ if (sidebar) {
         <div class="table-of-contents" v-if={{ demos }}
             ref="tableContents"
         >
-            <div v-if={{ demos.length > 0 }} class="aside-border-nav"></div>
             <ul>
+                <li v-if={{ demos.length > 0 }} class="aside-border-nav"></li>
                 <li v-for={{ demos }}
                     class={{ {
                         "c-ellipsis-dot": true,
@@ -118,14 +114,7 @@ if (sidebar) {
                     } }}
                     ev-click={{ self._scrollToView.bind(self, value) }}
                 >
-                    {{ do {
-                        let title = value.data.setting.title;
-                        if (typeof title === 'object') {
-                            title[language];
-                        } else {
-                            title;
-                        }
-                    } }}
+                    {{ value.data.setting.title }}
                 </li>
             </ul>
             <div v-if={{ false }} class="aside-border transition" style={{ self.get('borderStyle') }}></div>

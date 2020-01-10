@@ -23,6 +23,7 @@
         width $menu-item-icon-width
         text-align center
         margin-left -($menu-item-icon-width - $menu-item-padding-left + getLeft($menu-item-padding))
+        vertical-align middle
 
     // header
     .k-header
@@ -74,8 +75,20 @@
         generate(size)
 
     // collapse
+    .k-menu-item > .k-title span
+    .k-header :not(.k-icon)
+        transition opacity $transition
     &.k-collapsed
         width $menu-collapsed-width 
+        .k-menu-item
+            > .k-title
+                span
+                .k-arrow
+                    opacity 0
+        .k-header 
+            :not(.k-icon):not(intact-content)
+                opacity 0
+    &.k-horizontal.k-collapsed
         .k-menu-item
             > .k-title
                 span
@@ -124,7 +137,7 @@
             color $menu-item-hover-color
         .k-arrow
             float right
-            transition transform $transition
+            transition all $transition
             margin-left $menu-item-arrow-margin-left
             &:before
                 vertical-align top
@@ -144,9 +157,9 @@
         > .k-title 
             color $menu-item-hover-color
 
-    .c-expand-enter
-    .c-expand-leave
-        opacity 1
+    // .c-expand-enter
+    // .c-expand-leave
+        // opacity 1
 
     // active
     &.k-active

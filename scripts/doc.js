@@ -7,6 +7,8 @@ const webpack = require('webpack');
 const highlight = require('highlight.js');
 const intact2vue = require('./intact2vue');
 const intact2react = require('./intact2react');
+const intact2angular = require('./intact2angular');
+const fs = require('fs').promises;
 
 const languageMap = function(key) {
     const map = {
@@ -30,13 +32,27 @@ module.exports = function(isDev = true) {
 
     const doc = new KDoc(
         './@(docs|components)/**/*.md',
-        // './@(docs|components)/layout/**/*.md',
+        // './@(docs|components)/diagram/demos/*.md',
+        // './@(docs|components)/@(transfer|diagram)/demos/*.md',
         root
     );
 
     doc.use(KDoc.plugins.md);
 
     doc.use(function(ctx) {
+        // override ctx.fsWrite method, if the contents is equal to the last one, do nothing
+        const fsWrite = ctx.fsWrite;
+        ctx.fsWrite = async function(path, content) {
+            if (!path || !content) return;
+            let oldContent;
+            try {
+                oldContent = await fs.readFile(path, 'utf8');
+            } catch (e) {  }
+            if (Buffer.isBuffer(content)) content = content.toString();
+            if (content !== oldContent) {
+                return await fsWrite.call(ctx, path, content);
+            }
+        };
         Vdt.setDefaults({
             disableSplitText: true,
             skipWhitespace: false,
@@ -62,15 +78,25 @@ module.exports = function(isDev = true) {
             };
             const codeRenderer = renderer.code;
             renderer.code = function(code, language) {
-                const matches = code.match(/@file ([^\s]+)/);
+                let matches;
+                let showCode = false;
+                if (matches = code.match(/@code/)) {
+                    showCode = true;
+                } else {
+                    matches = code.match(/@file ([^\s]+)/);
+                }
                 if (matches) {
                     code = code.substring(code.indexOf('\n') + 1);
                 }
                 const result = codeRenderer.call(this, code, language);
                 if (matches) {
-                    codes[codes.length - 1].file = matches[1];
+                    if (!showCode) {
+                        codes[codes.length - 1].file = matches[1];
+                    } else {
+                        codes.pop();
+                    }
                 }
-                if (/demos/.test(file.path)) {
+                if (/demos/.test(file.path) && !showCode) {
                     return '';
                 } else {
                     return result; 
@@ -125,6 +151,7 @@ module.exports = function(isDev = true) {
                 let hasStylus = false;
                 let hasVue = false;
                 let hasReact = false;
+                let hasAngular = false;
 
                 // for vue
                 let vueScript;
@@ -134,6 +161,10 @@ module.exports = function(isDev = true) {
 
                 // for react
                 let reactMethods;
+
+                // for angular
+                let angularMethods;
+                let angularProperties;
 
                 let jsHead;
 
@@ -154,9 +185,10 @@ module.exports = function(isDev = true) {
                             item.content,
                         ].join('\n');
                     }
-                    if (item.language === 'styl') hasStylus = true;
-                    if (item.language === 'vue') hasVue = true;
-                    if (item.language === 'jsx') hasReact = true;
+                    if (item.language === 'styl') return (hasStylus = true);
+                    if (item.language === 'vue') return (hasVue = true);
+                    if (item.language === 'jsx') return (hasReact = true);
+                    if (item.language === 'ts') return (hasAngular = true);
                     if (item.language === 'vue-script') {
                         vueScript = item.content;
                         return false;
@@ -177,8 +209,16 @@ module.exports = function(isDev = true) {
                         reactMethods = item.content;
                         return false;
                     }
+                    if (item.language === 'angular-methods') {
+                        angularMethods = item.content;
+                        return false;
+                    }
                     if (item.language === 'js-head') {
                         jsHead = item.content;
+                        return false;
+                    }
+                    if (item.language === 'angular-properties') {
+                        angularProperties = item.content;
                         return false;
                     }
                     if (item.language === 'vue-ignore') {
@@ -190,6 +230,11 @@ module.exports = function(isDev = true) {
                         item.language = 'jsx';
                         item.ignored = true;
                         hasReact = true;
+                    }
+                    if (item.language === 'angular-ignore') {
+                        item.language = 'ts';
+                        item.ignored = true;
+                        hasAngular = true;
                     }
                     return true;
                 });
@@ -217,12 +262,16 @@ module.exports = function(isDev = true) {
                     // ignore App component
                     if (!/\/app\//.test(file.path)) {
                         const vdt = codes[0].content;
-                        const js = hasJs ? codes[hasStylus ? 2 : 1].content : null;
+                        let js;
+                        if (hasJs) {
+                            js = codes[hasStylus ? 2 : 1].content;
+                            js = js.split('\n').slice(hasStylus ? 3 : 2).join('\n');
+                        }
 
                         if (!hasVue) {
                             const code = {
                                 language: 'vue',
-                                content: intact2vue(vdt, js, vueScript, vueTemplate, vueMethods, vueData, jsHead)
+                                content: intact2vue(vdt, js, vueScript, vueTemplate, vueMethods, vueData, jsHead, hasStylus)
                             };
                             if (!hasReact) {
                                 codes.push(code);
@@ -234,7 +283,16 @@ module.exports = function(isDev = true) {
                         if (!hasReact) {
                             codes.push({
                                 language: 'jsx',
-                                content: intact2react(vdt, js, reactMethods, jsHead), 
+                                content: intact2react(vdt, js, reactMethods, jsHead, hasStylus), 
+                            });
+                        }
+
+                        if (!hasAngular) {
+                            // compile to angular
+                            // console.log(file.path);
+                            codes.push({
+                                language: 'ts',
+                                content: intact2angular(vdt, js, angularMethods, angularProperties, hasStylus),
                             });
                         }
                     }
@@ -309,10 +367,20 @@ module.exports = function(isDev = true) {
                             }
                         } else if (item.language === 'styl' && !item.file) {
                             // if (!iframe) {
+                                const requires = [];
                                 content = [
                                     `.example.index-${file.md.index}`,
-                                    ...content.split('\n').map(line => `    ${line}`)
+                                    ...content.split('\n').map(line => {
+                                        if (line.startsWith('@require')) {
+                                            requires.push(line);
+                                            return '';
+                                        }
+                                        return `    ${line}`
+                                    })
                                 ].join('\n');
+                                if (requires.length) {
+                                    content = requires.join('\n') + '\n' + content;
+                                }
                             // }
                         }
                         await ctx.fsWrite(!item.file ? file.relative : file.dirname + '/' + item.file, content);

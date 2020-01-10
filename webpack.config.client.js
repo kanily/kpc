@@ -13,13 +13,22 @@ module.exports = merge.smartStrategy({
         ],
     },
     devtool: '#inline-source-map',
+    // devtool: 'eval',
     output: {
         chunkFilename: 'static/chunk/[chunkhash].js'
     },
     module: {
         rules: [
             {
-                test: /\.(styl|css)$/,
+                test: /\.styl$/,
+                use: [
+                    {
+                        loader: 'style-loader',
+                    },
+                ]
+            },
+            {
+                test: /\.css$/,
                 use: [
                     {
                         loader: 'style-loader',

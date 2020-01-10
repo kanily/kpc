@@ -1,10 +1,21 @@
 import Intact from 'intact';
 import DropdownMenu from '../dropdown/menu';
 import position from '../moveWrapper/position';
-import template from './index.vdt';
+import template from './content.vdt';
 import '../../styles/kpc.styl';
 import './index.styl';
 import {findParentComponent, _$} from '../utils';
+
+const Types = Intact.Vdt.miss.Types;
+const isEmptyChildren = (vNodes) => {
+    if (!vNodes) return true;
+    if (Array.isArray(vNodes)) {
+        return vNodes.every(vNode => isEmptyChildren(vNode));
+    }
+    if (vNodes.type === Types.Text) {
+        return !vNodes.children;
+    }
+};
 
 export default class TooltipContent extends DropdownMenu {
     @Intact.template()
@@ -18,6 +29,17 @@ export default class TooltipContent extends DropdownMenu {
         confirm: Boolean,
         okText: String,
         cancelText: String,
+        theme: ['dark', 'light'],
+        disabled: Boolean,
+        always: Boolean,
+    };
+
+    static events = {
+        ...DropdownMenu.events,
+        beforeShow: true,
+        beforeHide: true,
+        cancel: true,
+        ok: true,
     };
 
     defaults() {
@@ -27,8 +49,11 @@ export default class TooltipContent extends DropdownMenu {
             showArrow: true,
             transition: 'c-fade',
             confirm: false,
-            okText: _$('确认'),
+            okText: _$('确定'),
             cancelText: _$('取消'),
+            theme: 'dark',
+            disabled: false,
+            always: false,
 
             _feedback: {},
         };
@@ -40,19 +65,23 @@ export default class TooltipContent extends DropdownMenu {
         this.on('$change:value', (c, value) => {
             this.trigger(value ? 'beforeShow' : 'beforeHide', this);
         });
+        this.on('$receive:children', (c, vNodes) => {
+            this.isEmptyChildren = isEmptyChildren(vNodes);
+        });
     }
 
     _mount() {
         super._mount();
 
         if (this.get('value')) {
-            this._addDocumentClick();
+            this.position('none');
+            this._addDocumentEvents();
         }
     }
 
     show() {
         // don't show if content is empty
-        if (!this.get('children')) return;
+        if (this.get('disabled') || this.isEmptyChildren) return;
 
         clearTimeout(this.timer);
         this.set('value', true); 
@@ -68,7 +97,7 @@ export default class TooltipContent extends DropdownMenu {
         }
     }
 
-    position() {
+    position(collision = 'flipfit') {
         let pos = this.get('position');
         if (typeof pos === 'string') {
             switch (pos) {
@@ -91,7 +120,7 @@ export default class TooltipContent extends DropdownMenu {
             my: 'center bottom-10', 
             at: 'center top', 
             of: this.dropdown.element,
-            collision: 'flipfit',
+            collision,
             using: (feedback) => {
                 this.set('_feedback', feedback);
 
@@ -126,6 +155,9 @@ export default class TooltipContent extends DropdownMenu {
         this.trigger('ok', this);
         this.hide(true);
     }
+
+    _onDocumentClick(e) {
+        if (this.get('always')) return;
+        super._onDocumentClick(e);
+    }
 }
-
-

@@ -3,10 +3,14 @@ import template from './index.vdt';
 import '../../styles/kpc.styl';
 import './index.styl';
 import Node from './node';
+import {debounce} from '../utils';
+import {BEFORE, AFTER, INNER, RANGE} from './constants';
 
 export default class Tree extends Intact {
     @Intact.template()
     static template = template;
+
+    static blocks = ['label'];
 
     static propTypes = {
         data: Array,
@@ -17,6 +21,18 @@ export default class Tree extends Intact {
         filter: Function,
         selectedKeys: Array,
         multiple: Boolean,
+        draggable: Boolean,
+        allowDrag: Function,
+        allowDrop: Function,
+        uncorrelated: Boolean,
+    };
+
+    static events = {
+        'rightclick:node': true,
+        'click:node': true,
+        'denydrag': true,
+        'denydrop': true,
+        'dragend': true,
     };
 
     defaults() {
@@ -29,6 +45,10 @@ export default class Tree extends Intact {
             filter: undefined,
             selectedKeys: undefined,
             multiple: false,
+            draggable: false,
+            allowDrag: undefined,
+            allowDrop: undefined,
+            uncorrelated: false,
         }
     }
 
@@ -50,6 +70,9 @@ export default class Tree extends Intact {
         this.on('$receive:selectedKeys', () => {
             this.selectedKeys = new Set(this.get('selectedKeys'));
         });
+        this.on('$receive:uncorrelated', this._mappingKeys);
+
+        this._handleDragOver = debounce(this._handleDragOver, 100);
     }
 
     _mappingKeys() {
@@ -72,7 +95,9 @@ export default class Tree extends Intact {
             this.update();
             const children = await load(node);
             node.loaded = true;
-            node.append(children);
+            if (children) {
+                node.append(children);
+            }
         }
 
         if (expanded) {
@@ -195,10 +220,137 @@ export default class Tree extends Intact {
             // lastProps.data !== nextProps.data ||
             // lastProps.checkedKeys !== nextProps.checkedKeys ||
             lastProps.filter !== nextProps.filter ||
-            lastProps.expandedKeys !== nextProps.expandedKeys
+            lastProps.expandedKeys !== nextProps.expandedKeys ||
+            lastProps.uncorrelated !== nextProps.uncorrelated
         ) return;
 
         this._mappingKeys();
+    }
+
+    _onDragStart(event) {
+        event.stopPropagation();
+
+        const node = this._draggingNode;
+        const {allowDrag} = this.get();
+        if (node.data.disabled || allowDrag && !allowDrag(node)) {
+            this.trigger('denydrag', node);
+            return event.preventDefault();
+        }
+
+        // this.shrink(node.key, false);
+        this.set({'_draggingNode': node});
+
+        try {
+            // ie throw error
+            // firefox-need-it
+            event.dataTransfer.setData('text/plain', '');
+        } catch (error) {
+          // empty
+        }
+
+        event.dataTransfer.setDragImage(this._draggingDOM, 0, 0);
+    }
+
+    _onMouseDown(node, event) {
+        // dragend is not dispatched if the source node was moved or remove
+        // during the drag session
+        // https://bugzilla.mozilla.org/show_bug.cgi?id=460801
+        // we can not use mouseup instead, because the event does not trigger
+        this._draggingNode = node;
+        this._draggingDOM = event.currentTarget;
+    }
+
+    _onDragOver(node, event) {
+        event.preventDefault();
+
+        // if the mouse does not move, do nothing
+        const {clientX, clientY} = event;
+        const {_clientX, _clientY} = this;
+        if (clientX === _clientX && clientY === _clientY) return;
+        this._clientX = clientX;
+        this._clientY = clientY;
+
+        // when use debounce, the currentTarget will be missing when disable delegate
+        // so we pass it as parameter
+        this._handleDragOver(node, event, event.currentTarget);
+    }
+
+    _handleDragOver(node, event, currentTarget) {
+        const draggingNode = this.get('_draggingNode');
+        // maybe it is end
+        if (!draggingNode) return;
+
+        let parentNode = node;
+        do {
+            if (parentNode.key === draggingNode.key) {
+                return;
+            }
+        } while (parentNode = parentNode.parent)
+
+        const {_node, _mode} = this;
+        const mode = this._calcInsertMode(event, currentTarget);
+
+        if (_mode !== mode || _node !== node) {
+            this._mode = mode;
+            this._node = node;
+             // if this node does not allow drop, prevent to insert the dragging node inner it
+            if (mode === INNER) {
+                const {allowDrop} = this.get();
+                if (node.data.disabled || allowDrop && !allowDrop(node)) {
+                    return this.trigger('denydrop', node);
+                }
+            }
+
+            this._lastValidNode = node;
+
+            draggingNode.remove(true);
+            this._insertNode(node, draggingNode, mode);
+        }
+    }
+
+    _calcInsertMode(event, currentTarget) {
+        const {clientY} = event; 
+        const {top, bottom, height} = currentTarget.getBoundingClientRect();
+        const des = height * RANGE;
+
+        if (clientY <= top + des) return BEFORE;
+        else if (clientY >= bottom - des) return AFTER;
+        return INNER;
+    }
+
+    _insertNode(node, draggingNode, mode) {
+        switch (mode) {
+            case BEFORE:
+                draggingNode.insertBefore(node);
+                break;
+            case AFTER:
+                draggingNode.insertAfter(node);
+                break;
+            default:
+                draggingNode.appendTo(node);
+                break;
+        }
+    }
+
+    _onDragEnd() {
+        const {_draggingNode} = this.get();
+
+        if (this._lastValidNode) {
+            this.trigger('dragend', {
+                tree: this.root,
+                srcNode: _draggingNode,
+                toNode: this._lastValidNode,
+                mode: this._mode,
+            });
+        }
+
+        this._draggingDOM = null;
+        this._draggingNode = null;
+        this._node = null;
+        this._mode = null;
+        this._lastValidNode = null;
+
+        this.set('_draggingNode', undefined);
     }
 }
 

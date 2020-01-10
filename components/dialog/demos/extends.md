@@ -25,6 +25,7 @@ In practical applications, the logic of dialog is generally very complicated. Th
 
 ```js
 // @file dialog.js
+import Intact from 'intact';
 import Dialog from 'kpc/components/dialog';
 import template from './dialog.vdt';
 
@@ -82,4 +83,8 @@ Vue does not support the use of inheritance, please use the dialog component usa
 
 ```react-ignore
 React does not support the use of inheritance, please use the dialog component usage
+```
+
+```angular-ignore
+Angular不支持继承用法，请使用Dialog组件用法
 ```

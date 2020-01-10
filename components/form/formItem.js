@@ -1,12 +1,16 @@
 import Intact from 'intact';
 import template from './formItem.vdt';
 import Form from './form';
+import '../../styles/kpc.styl';
+import './index.styl';
 
 const warn = Intact.utils.warn;
 
 export default class FormItem extends Intact {
     @Intact.template()
     get template() { return template; }
+
+    static blocks = ['label', 'content', 'append'];
 
     static propTypes = {
         model: String,
@@ -20,7 +24,13 @@ export default class FormItem extends Intact {
         htmlFor: String,
         hideLabel: Boolean,
         force: Boolean,
-    }
+        fluid: Boolean,
+    };
+
+    static events = {
+        change: true,
+        focusout: true,
+    };
 
     defaults() {
         return {
@@ -37,6 +47,7 @@ export default class FormItem extends Intact {
             htmlFor: undefined,
             hideLabel: false,
             force: false,
+            fluid: false,
         }
     }
 
@@ -153,7 +164,8 @@ export default class FormItem extends Intact {
                 return [false, message, className];
             })
             .then(([isValid, message, className]) => {
-                if (p.cancelled) return;
+                // if cancelled, should return the last result
+                if (p.cancelled) return this.get('isValid');
                 this.set({
                     isDirty: true,
                     isValid: isValid,
@@ -204,6 +216,16 @@ export default class FormItem extends Intact {
         setTimeout(() => {
             this.validate()
         }, 100);
+    }
+
+    _onChange(e) {
+        this.trigger('change', e);
+        this._dirty();
+    }
+
+    _onFocusout(e) {
+        this.trigger('focusout', e);
+        this._dirty();
     }
 
     _cancel() {

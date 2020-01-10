@@ -1,25 +1,27 @@
 const {indent, dedent, getDefaults} = require('./utils');
 
-module.exports = function(vdt, js, reactMethods, jsHead) {
-    const obj = parse(vdt, js, reactMethods);
+module.exports = function(vdt, js, reactMethods, jsHead, hasStylus) {
+    const obj = parse(vdt, js, reactMethods, hasStylus);
     const result = [
         `import React from 'react';`,
-        obj.head + (jsHead ? '\n' + jsHead + '\n' : ''),
-        'export default class extends React.Component {',
+        obj.head.trim(),
+        jsHead,
+        '',
+        'export default class Demo extends React.Component {',
         obj.js,
         '}',
-    ];
+    ].filter(item => item !== undefined);
 
     return result.join('\n');
 }
 
-const importRegExp = /import \{?(.*?)\}? from .*/g
-function parse(vdt, js, reactMethods) {
+const importRegExp = /import \{?([\s\S]*?)\}? from .*/g
+function parse(vdt, js, reactMethods, hasStylus) {
     const components = [];
     let head = '';
     let template = vdt.replace(importRegExp, (match, name) => {
-        components.push(...(name.split(', ')));
-        head += match + '\n';
+        components.push(...(name.split(',').map(item => item.trim())).filter(Boolean));
+        head += match.replace('kpc', 'kpc-react') + '\n';
         return '';
     });
 
@@ -50,16 +52,38 @@ function parse(vdt, js, reactMethods) {
     let scripts = [];
 
     if (js) {
+        const lines = js.split('\n');
+        const _head = [];
+        let hasAdded = false;
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            if (line.startsWith('import')) {
+                const matches = line.match(/import \{?(.*?)\}? from .*/);
+                if (matches) {
+                    const names = matches[1].split(',').map(item => item.trim());
+                    if (names.find(name => components.indexOf(name) > -1)) continue;
+                    line = line.replace('kpc', 'kpc-react');
+                }
+            } else if (!hasAdded && hasStylus) {
+                head += `import './index.styl';`;
+                hasAdded = true;
+            }
+            if (line.startsWith('export default')) {
+                js = lines.slice(i).join('\n');
+                break;
+            }
+            _head.push(line);
+        }
+        
+        head += _head.join('\n');
+
         const defaults = getDefaults(js);
         if (defaults) {
             properties.state = defaults;
         }
         Object.assign(methodsObj, getMethods(js));
-        js.replace(importRegExp, (match, name) => {
-            if (components.indexOf(name) > -1) return;
-            if (name === 'Intact' || name === 'template') return;
-            head += match + '\n'
-        });
+    } else if (hasStylus) {
+        head += `import './index.styl';`;
     }
 
     if (reactMethods) {
@@ -137,6 +161,8 @@ function parse(vdt, js, reactMethods) {
 
 const delimitersRegExp = /\b([^\s]*?)=\{\{\s+([\s\S]*?)\s+}}/g;
 function parseProperty(template, properties, methods) {
+    // specical for Editable validate string
+    template = template.replace('"\\d+"', '"\\\\d+"');
     return template.replace(delimitersRegExp, (match, name, value) => {
         value = parseGet(value, properties); 
         if (name.substring(0, 3) === 'ev-') {
@@ -325,39 +351,52 @@ function parseBlock(template) {
                     const lastChar = componentCode[componentCode.length - 1];
                     const indentCount = compponentSpaces.length / 4 + 1;
     
-                    results[0] = (lastChar === '>' ? componentCode.slice(0, -1) : componentCode) + '\n' +
+                    results[0] = [
+                        (lastChar === '>' ? componentCode.slice(0, -1) : componentCode),
                         indent([
                             blocks.map(block => {
                                 const codes = block.codes;
                                 if (!block.params) {
                                     if (codes.length === 1) {
-                                        return indent(`b-${block.name}={<>${block.codes[0].trim()}</>}`, indentCount);
+                                        return indent(`b-${block.name}={<React.Fragment>${block.codes[0].trim()}</React.Fragment>}`, indentCount);
                                     } else {
                                         return [
-                                            indent(`b-${block.name}={<>`, indentCount),
-                                            dedent(block.codes),
-                                            indent(`</>}`, indentCount)
+                                            indent(`b-${block.name}={<React.Fragment>`, indentCount),
+                                            block.codes,
+                                            indent(`</React.Fragment>}`, indentCount)
                                         ];
                                     }
                                 } else {
                                     return [
                                         indent(`b-${block.name}={(${block.params}) => {`, indentCount),
-                                        indent(`    return <>`, indentCount),
+                                        indent(`    return <React.Fragment>`, indentCount),
                                         indent(block.codes, 1),
-                                        indent(`    </>`, indentCount),
+                                        indent(`    </React.Fragment>`, indentCount),
                                         indent(`}}`, indentCount),
                                     ];
                                 }
                             }),
                             lastChar === '>' ? indent('>', indentCount - 1) : undefined,
-                        ], 0).join('\n');
+                        ], 0)
+                    ];
                 }
                 results.push(code);
                 const _results = results;
 
+                function flat(arr) {
+                    return arr.reduce((memo, item) => {
+                        if (Array.isArray(item)) {
+                            memo = memo.concat(flat(item));
+                        } else {
+                            memo.push(item);
+                        }
+                        return memo;
+                    }, []);
+                }
+
                 stacks.pop();
                 results = resultsStacks.pop();
-                results.push(..._results);
+                results.push(...(flat(_results)));
                 continue;
             }
         }
@@ -552,6 +591,16 @@ function parseVIf(template) {
                 }
                 results.push(`${spaces}}`);
                 code = results.join('\n');
+
+                const _last = stacks[stacks.length - 1];
+                if (_last) {
+                    // nested v-if
+                    const {codes} = _last;
+                    const _code = indent(code);
+                    _code[0] = dedent(_code[0]);
+                    codes.push(_code.join('\n'));
+                    continue;
+                }
                 // console.log(stack);
             } else {
                 const {spaces, codesStacks} = last;
@@ -594,7 +643,7 @@ function parseGet(template, properties = {}) {
 }
 
 function parseTemplate(template) {
-    return template.replace(/(<|<\/)template>/g, '$1>');
+    return template.replace(/(<|<\/)template>/g, '$1React.Fragment>');
 }
 
 function getMethods(js) {
@@ -604,7 +653,7 @@ function getMethods(js) {
     const lines = js.split('\n');
     let spaces = '';
     lines.forEach((code, index) => {
-        const matches = code.match(/^(\s*)((?:async )?\w+)\(.*?\) {$/);
+        const matches = code.match(/^(\s*)(?:(?:get|set|async) )?(\w+)\(.*?\) {$/);
         if (matches) {
             start = index;
             name = matches[2];

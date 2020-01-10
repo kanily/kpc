@@ -1,14 +1,19 @@
 import Icon from '../icon';
 import Button from '../button';
-import {normalize} from 'intact';
+import Intact from 'intact';
 
-let {type, content, hideIcon, hideFooter, showClose} = self.get();
+const normalize = Intact.normalize;
+
+let {
+    type, content, hideIcon,
+    hideFooter, showClose, _title
+} = self.get();
 
 if (normalize) {
     content = normalize(content);
 }
 
-<t:parent class={{ {[`k-${type}`]: true, 'k-alert-dialog': true} }}
+<t:parent class={{ {[`k-${type}`]: true, 'k-alert-dialog': true, 'k-with-title': _title} }}
     hideClose={{ !showClose }}
 >
     <b:body>
@@ -19,13 +24,16 @@ if (normalize) {
                 "ion-ios-close": type === 'error',
             } }} v-if={{ !hideIcon }} />
         </div>
-        {{ content }}
+        <div class="k-content-wrapper">
+            <div class="k-title" v-if={{ _title }}>{{ _title }}</div>
+            {{ content }}
+        </div>
     </b:body>
     <b:footer>
-        <Button ev-click={{ self.cancel }}
+        <Button class="k-cancel" ev-click={{ self.cancel }}
             v-if={{ type === 'confirm' && !hideFooter }}
         >{{ self.get('cancelText') }}</Button>
-        <Button type="primary" ev-click={{ self.ok }} 
+        <Button class="k-ok" type="primary" ev-click={{ self.ok }}
             loading={{ self.get('loading') }}
             disabled={{ self.get('disabledOk') }}
             v-if={{ !hideFooter }}

@@ -6,9 +6,17 @@ import {position} from '../moveWrapper/position';
 import {_$} from '../utils';
 import addStaticMethods from './methods';
 
+// only close the top dialog when press ESC 
+const dialogs = [];
+const escClose = (e) => {
+    dialogs[dialogs.length - 1]._escClose(e);
+}
+
 export default class Dialog extends Intact {
     @Intact.template()
     static template = template;
+
+    static blocks = ['header', 'body', 'footer', 'footer-wrapper'];
 
     static propTypes = {
         title: String,
@@ -20,6 +28,21 @@ export default class Dialog extends Intact {
         cancelText: String,
         ok: Function,
         cancel: Function,
+        container: [String, Function],
+        hideClose: Boolean,
+        overlay: Boolean,
+        closable: Boolean,
+        terminate: Function,
+        escClosable: Boolean,
+        width: [String, Number],
+        mode: ['destroy', 'hide'],
+    };
+
+    static events = {
+        open: true,
+        close: true,
+        ok: true,
+        cancel: true,
     };
 
     defaults() {
@@ -29,10 +52,18 @@ export default class Dialog extends Intact {
             size: 'default', // large | default | small | mini
             loading: false,
             disabledOk: false,
-            okText: _$('确认'),
+            okText: _$('确定'),
             cancelText: _$('取消'),
             ok: undefined,
             cancel: undefined,
+            container: () => document.body,
+            hideClose: false,
+            overlay: true,
+            closable: true,
+            terminate: undefined,
+            escClosable: true,
+            width: undefined,
+            mode: 'destroy',
 
             _dragging: false,
         }
@@ -73,12 +104,18 @@ export default class Dialog extends Intact {
     _onOpen() {
         this.trigger('open');
         this._center();
-        document.addEventListener('keydown', this._escClose);
+        if (!dialogs.length) {
+            document.addEventListener('keydown', escClose);
+        }
+        dialogs.push(this);
     }
 
     _onClose() {
         this.trigger('close');
-        document.removeEventListener('keydown', this._escClose);
+        dialogs.pop();
+        if (!dialogs.length) {
+            document.removeEventListener('keydown', escClose);
+        }
     }
 
     showLoading() {
@@ -133,9 +170,9 @@ export default class Dialog extends Intact {
                 this.set('value', true);
             } else {
                 const show = () => {
+                    this.set('value', true);
                     this.init(); 
                     this.mount();
-                    this.set('value', true);
                     resolve();
                 }
                 if (this.inited) {
@@ -149,13 +186,17 @@ export default class Dialog extends Intact {
 
     _escClose(e) {
         // Esc
-        if (e.keyCode === 27) this.close();
+        if (this.get('escClosable') && e.keyCode === 27) {
+            this._terminate();
+        }
     }
 
     _leaveEnd() {
         // use as instance or use as component but it has be destroyed
         // then remove the element
-        if (!this._useAsComponent || this._useAsComponent && this.destroyed) {
+        // maybe the animation leaveEnd immediately when destroy it before enters
+        // so use `_destroyed` instead of `destroyed`
+        if (!this._useAsComponent || this._useAsComponent && this._destroyed) {
             this.vdt.vNode.children._$destroy();
         }
     }
@@ -221,7 +262,29 @@ export default class Dialog extends Intact {
         }
     }
 
+    _onClickOverlay() {
+        if (this.get('closable')) {
+            this._terminate();
+        }
+    }
+
+    /**
+     * @brief 
+     * only be called by self when user clicks close button,
+     * presses ESC or clicks overlay 
+     */
+    _terminate() {
+        const terminate = this.get('terminate');
+        if (terminate) {
+            terminate.call(this, this);
+        } else {
+            this.trigger('terminate');
+            this.close();
+        }
+    }
+
     _destroy(...args) {
+        this._destroyed = true;
         if (this.get('value')) {
             this.close();
         } else {

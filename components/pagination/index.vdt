@@ -1,14 +1,14 @@
 import Select from '../select';
 import Input from '../input';
 import {ButtonGroup, Button} from '../button';
-import {_$} from '../utils';
+import {_$, getRestProps} from '../utils';
 import Icon from '../icon';
 
 const {
     total, current, limit, limits, 
     className, showTotal, showGoto,
     counts, size, noBorder, simple,
-    ...rest
+    showLimits
 } = self.get();
 
 if (!total) return <!-- pagination -->
@@ -38,7 +38,7 @@ const paginationDot = function(callback) {
     return <Button type={{ type }} size={{ size }} icon class="k-ellipsis" ev-click={{ callback }}>...</Button>
 };
 
-<div class={{ classNameObj }}>
+<div {{ ...getRestProps(self) }} class={{ classNameObj }}>
     <ButtonGroup checkType="radio" v-model="current">
         <Button icon size={{ size }}
             disabled={{ current <= 1 }}
@@ -110,7 +110,7 @@ const paginationDot = function(callback) {
     </ButtonGroup>
 
     <template v-if={{ !simple }}>
-        <div class="k-limits">
+        <div class="k-limits" v-if={{ showLimits }}>
             <Select v-model="limit" allowUnmatch
                 data={{ limits.map(item => {
                     return {'value': item, 'label': _$('{n} 条 / 页', {n: item})};
@@ -120,9 +120,11 @@ const paginationDot = function(callback) {
         </div>
 
         <div class="k-goto" v-if={{ showGoto }}>
-            {{ _$('跳至') }}<Input size={{ size }} value={{ current }}
+            <span class="c-middle">{{ _$('跳至') }}</span>
+            <Input size={{ size }} value={{ current }}
                 ev-change={{ self._goto }}
-            />{{ _$('页') }}
+            />
+            <span class="c-middle">{{ _$('页') }}</span>
         </div>
 
         <div v-if={{ showTotal }} class="k-total">{{ _$('共 {n} 条', {n: total}) }}</div>

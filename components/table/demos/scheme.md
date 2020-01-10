@@ -71,7 +71,7 @@ const scheme = {
 ```
 
 ```styl
-.k-table-wrapper
+.k-table
     margin-bottom 20px
 ```
 
@@ -114,8 +114,9 @@ data() {
 ```jsx
 import React from 'react';
 import {Table, TableColumn} from 'kpc/components/table';
+import './index.styl';
 
-export default class extends React.Component {
+export default class Demo extends React.Component {
     render() {
         const data = [{a: 'Virtual DOM', b: 'get the item.b', c: {c1: 'item.c.c1'}}];
         const scheme = {
@@ -149,4 +150,8 @@ export default class extends React.Component {
         )
     }
 }
+```
+
+```angular-ignore
+不建议Angular下使用这种方式
 ```

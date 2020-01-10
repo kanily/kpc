@@ -43,15 +43,15 @@ import {Input} from 'kpc/components/input';
 import {Button} from 'kpc/components/button';
 
 <Form>
-    <FormItem label="Descriptions">
+    <FormItem label="描述">
         <FormItem v-for={{ self.get('descriptions') }}
             model={{ `descriptions[${key}]` }}
             hideLabel
             rules={{ {
                 required: true, 
-                // custom global rule
+                // 自定义全局规则
                 letter: true,
-                // custom local rule, all descriptions must be different
+                // 自定义局部规则，所有描述必须不重复
                 unique: (value) => {
                     let count = 0;
                     self.get('descriptions').find(item => {
@@ -59,18 +59,17 @@ import {Button} from 'kpc/components/button';
                         return count > 1;
                     });
 
-                    // return the error message directly, or you can specify it
-                    // by the messages property: {unique: 'Must be different'}
-                    return count === 1 || 'Must be different.';
+                    // 直接返回错误文案，或者也可以单独定义messages为{unique: '不能相同'}
+                    return count === 1 || '不能相同';
                 }
             } }}
         >
             <Input v-model={{ `descriptions[${key}]` }} />    
             <b:append>
-                <Button ev-click={{ self.remove.bind(self, key) }}>Delete</Button>
+                <Button ev-click={{ self.remove.bind(self, key) }}>删除</Button>
             </b:append>
         </FormItem>
-        <Button ev-click={{ self.add }}>Add</Button>
+        <Button ev-click={{ self.add }}>添加</Button>
     </FormItem>
 </Form>
 ```
@@ -92,10 +91,10 @@ import {Button} from 'kpc/components/button';
 ```js
 import {Form} from 'kpc/components/form';
 
-// add a global rule
+// 添加全局规则
 Form.addMethod('letter', (value, item, param) => {
     return /^[a-z|A-Z]+$/.test(value);
-}, 'Only letters can be entered.');
+}, '只能输入字母');
 
 export default class extends Intact {
     @Intact.template()
@@ -119,13 +118,6 @@ export default class extends Intact {
 }
 ```
 
-```js-head
-// add a global rule
-Form.addMethod('letter', (value, item, param) => {
-    return /^[a-z|A-Z]+$/.test(value);
-}, 'Only letters can be entered.');
-```
-
 ```vue-methods
 add() {
     this.descriptions.push('');
@@ -136,7 +128,7 @@ remove(index) {
 ```
 
 ```react-methods
-// inject the current context by _context
+// 注入_context上下文
 static childContextTypes = {
     _context: () => {}
 }
@@ -149,5 +141,70 @@ getChildContext() {
 
 add() {
     this.setState({descriptions: this.state.descriptions.concat('')});
+}
+```
+
+```ts
+import {Component} from '@angular/core';
+import {Form} from 'kpc/components/form';
+
+// 添加全局规则
+Form.addMethod('letter', (value, item, param) => {
+    return /^[a-z|A-Z]+$/.test(value);
+}, '只能输入字母');
+
+@Component({
+    selector: 'app-demo',
+    template: `
+        <k-form>
+            <k-form-item label="标签">
+                <k-form-item
+                    *ngFor="let value of descriptions; let i = index; trackBy: trackArray"
+                    model="descriptions[{{ i }}]"
+                    [hideLabel]="true"
+                    [rules]="{
+                        required: true, 
+                        letter: true,
+                        unique: unique
+                    }"
+                    [force]="true"
+                >
+                    <k-input [(value)]="descriptions[i]"></k-input>    
+                    <ng-template #append>
+                        <k-button (click)="remove(i)">删除</k-button>
+                    </ng-template>
+                </k-form-item>
+                <k-button (click)="add()">添加</k-button>
+            </k-form-item>
+        </k-form>
+    `,
+    styleUrls: ['./index.styl'],
+})
+export class AppDemoComponent {
+    private descriptions = ["", ""];
+
+    add() {
+        this.descriptions = this.descriptions.concat('');
+    }
+    
+    remove(index) {
+        this.descriptions.splice(index, 1);
+    }
+
+    trackArray(index) {
+        return index;
+    }
+
+    // 局部验证规则
+    unique = (value) => {
+        let count = 0;
+        this.descriptions.find(item => {
+            if (item === value) count++;
+            return count > 1;
+        });
+
+        // 直接返回错误文案，或者也可以单独定义messages为{unique: '不能相同'}
+        return count === 1 || '不能相同';
+    }
 }
 ```

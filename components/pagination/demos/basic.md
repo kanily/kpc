@@ -13,6 +13,8 @@ order: 0
 
 The basic usage of `Pagination`, the total number of data is specified by `total`, `limit` specifies the number of data per page, and the `limits` array defines the number of items to choose. You can listen for changes to the components `current` and `limit` through the `change` event. The component passes `current` and `limit` to the event callback function via the object.
 
+> 如果总条数`total`为`0`，则该组件不会渲染
+
 ```vdt
 import Pagination from 'kpc/components/pagination';
 

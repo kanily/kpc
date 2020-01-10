@@ -33,7 +33,11 @@ export default class Tabs extends Intact {
         size: ['large', 'default', 'small', 'mini'],
         type: ['default', 'card', 'border-card', 'no-border-card'],
         closable: Boolean,
-    }
+    };
+
+    static events = {
+        remove: true,
+    };
 
     _changeTab(item) {
         // if exits 'to', we don't change the value,
@@ -106,8 +110,6 @@ export default class Tabs extends Intact {
     }
 
     _setActiveBarStyle() {
-        if (this.get('type') !== 'default') return;
-
         const vertical = this.get('vertical');
         const activeTab = this.element.querySelector('.k-tab.k-active');
 

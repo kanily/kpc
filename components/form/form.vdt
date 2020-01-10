@@ -1,4 +1,6 @@
-const {children, className, ref, key, style, layout} = self.get();
+import {getRestProps} from '../utils';
+
+const {children, className, layout} = self.get();
 
 const classNameObj = {
     'k-form': true,
@@ -6,7 +8,7 @@ const classNameObj = {
     [`k-${layout}`]: layout,
 };
 
-<form class={{ classNameObj }} style={{ style }} 
+<form {{ ...getRestProps(self) }} class={{ classNameObj }}
     ev-submit={{ self._submit }}
     noValidate
 >{{ children }}</form>

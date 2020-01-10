@@ -19,6 +19,7 @@
         position absolute
         top 50%
         transform translateY(-50%)
+        color $select-icon-color
         // line-height 1
 
     // fluid
@@ -30,17 +31,27 @@
         opacity 0
         transition opacity $transition
         pointer-events none
+        position absolute
+        z-index 1
         &:hover
             color $primary-color
-    &.k-with-suffix
-        .k-clear
-            margin-right $select-clear-margin-right
+    // &.k-with-suffix
+    //     .k-clear
+    //         margin-right $select-clear-margin-right
     &:hover
         > .k-wrapper
             border $select-hover-border
         .k-clear.k-show
             opacity 1
             pointer-events all
+    .k-suffix-icon
+        display inline-block
+        transition opacity $transition
+    &.k-clearable
+        &:hover
+            .k-clear.k-show + .k-suffix-icon
+                opacity 0
+
 
     // filterable
     .k-input
@@ -140,9 +151,9 @@
             &.k-clearable
                 .k-main
                     padding-right lookup('$select-' + size + '-suffix-padding-right') 
-            &.k-with-suffix.k-clearable
-                .k-main
-                    padding-right lookup('$select-' + size + '-clearable-suffix-padding-right')
+            // &.k-with-suffix.k-clearable
+            //     .k-main
+            //         padding-right lookup('$select-' + size + '-clearable-suffix-padding-right')
         if lookup('$select-' + size + '-padding-left')
             &.k-clearable
                 > .k-wrapper
@@ -170,7 +181,7 @@
     max-height $select-dropdown-max-height
     overflow auto
     .k-active
-        color $primary-color
+        color $select-active-color
     .k-item
         white-space nowrap
         overflow hidden
@@ -203,5 +214,10 @@
         &:before
             font-size $select-multiple-checkmark-font-size
 
+    // no data
+    .k-no-data
+        padding $select-no-data-padding
+        color $select-no-data-color 
+        text-align center
 
 requireTheme('select')

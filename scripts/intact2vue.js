@@ -2,7 +2,7 @@ const Intact = require('intact');
 const Vdt = Intact.Vdt;
 const {indent, dedent, getDefaults} = require('./utils');
 
-module.exports = function(vdt, js, vueScript, vueTemplate, vueMethods, vueData, jsHead) {
+module.exports = function(vdt, js, vueScript, vueTemplate, vueMethods, vueData, jsHead, hasStylus) {
     // console.log(vdt, js, vueScript);
     const obj = parse(vdt, js, vueScript, vueTemplate, vueMethods, vueData);
     const result = [
@@ -16,20 +16,26 @@ module.exports = function(vdt, js, vueScript, vueTemplate, vueMethods, vueData, 
         `}`,
         `</script>`,
     ];
+    if (hasStylus) {
+        result.push('<style lang="stylus" src="./index.styl"></style>');
+    }
 
     return result.join('\n');
 }
 
-const importRegExp = /import \{?(.*?)\}? from .*/g
+const importRegExp = /import \{?([\s\S]*?)\}? from .*/g
 function parse(vdt, js, vueScript, vueTemplate, vueMethods, vueData) {
     const components = [];
     let properties = {};
     let methods = {};
     let head = '';
     let template = vdt.replace(importRegExp, (match, name) => {
-        name = name.split(', ').map(item => item === 'Switch' ? 'KSwitch' : item);
+        name = name.split(',').map(item => {
+            item = item.trim();
+            return item === 'Switch' ? 'KSwitch' : item;
+        }).filter(Boolean);
         components.push(...name);
-        head += match.replace('Switch', 'Switch as KSwitch') + '\n';
+        head += match.replace('Switch', 'Switch as KSwitch').replace('kpc', 'kpc-vue') + '\n';
         return '';
     }).replace(/<(\/)?Switch/g, '<$1KSwitch');
     if (vueTemplate) {
@@ -54,6 +60,24 @@ function parse(vdt, js, vueScript, vueTemplate, vueMethods, vueData) {
 
     let methodsObj = {};
     if (js) {
+        const lines = js.split('\n');
+        const _head = [];
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            if (line.startsWith('import')) {
+                const matches = line.match(/import \{?(.*?)\}? from .*/);
+                const names = matches[1].split(', ').map(item => item === 'Switch' ? 'KSwitch' : item)
+                if (names.find(name => components.indexOf(name) > -1)) continue;
+                line = line.replace('kpc', 'kpc-vue');
+            }
+            if (line.startsWith('export default')) {
+                js = lines.slice(i).join('\n');
+                break;
+            }
+            _head.push(line);
+        }
+        head += _head.join('\n');
+        
         const {defaults, methods} = parseJS(js, vueData);
         if (defaults) {
             properties = {...properties, ...defaults};
@@ -121,6 +145,8 @@ function parseJS(js, vueData) {
 const delimitersRegExp = /\b([^\s]*?)=\{\{\s+([\s\S]*?)\s+}}/g;
 const getRegExp = /self\.get\(['"](.*?)['"]\)/g;
 function parseProperty(template, properties, methods) {
+    // specical for Editable validate string
+    template = template.replace('"\\d+"', '"\\\\d+"');
     return template.replace(delimitersRegExp, (match, name, value) => {
         value = value.replace(getRegExp, (nouse, name) => {
             properties[name] = null;
@@ -154,7 +180,7 @@ function parseProperty(template, properties, methods) {
                 value = value.substring(5);
             }
         }
-        value = value.replace(/self\./, '');
+        value = value.replace(/self\./, '').replace(/\\/g, '\\\\');
         return `${name}="${value}"`;
     });
 }
@@ -177,7 +203,9 @@ function parseInterpolation(template, properties, methods) {
 function parseVModel(template, properties) {
     return template.replace(/v\-model(:(.*?))?=['"]([^"']+)["']/g, (match, nouse, name, value) => {
         if (/\$data/.test(value)) return match;
-        properties[value] = null;
+        if (/^\w+$/.test(value)) {
+            properties[value] = null;
+        }
         if (!nouse) {
             return match;
         } else {

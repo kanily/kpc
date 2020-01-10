@@ -1,5 +1,5 @@
 ---
-title: 快速开始
+title: Intact中使用
 order: 0
 sidebar: doc
 ---
@@ -9,7 +9,7 @@ sidebar: doc
 在学习使用kpc之前，假设你已经掌握了以下知识：
 
 1. [webpack][1] + [babel][2]
-2. [Vue][3]（如果将kpc用于Vue项目）或者[Intact][4]（如果将kpc用于Intact项目）或者[React][7]（如果将kpc用于React项目）
+2. [intact][4]
 
 # 手动引入
 
@@ -19,7 +19,7 @@ sidebar: doc
 npm install kpc -S
 ```
 
-## 单文件构建版
+## 单文件引入
 
 如果你的项目没有使用webpack来构建，可以引入单文件构建版。将`kpc.css`和`kpc.js`在html文件中引入。
 此时所有组件都在`Kpc`命名空间下，例如`Kpc.Button` `Kpc.Table`等。
@@ -29,8 +29,8 @@ npm install kpc -S
 
 ### CDN
 
-通过[cdn.jsdelivr.net/npm/kpc/dist/](https://cdn.jsdelivr.net/npm/kpc/dist/)可以直接引入最新版kpc，
-建议使用锁定版本地址，例如：[cdn.jsdelivr.net/npm/kpc@0.5.14/dist/](https://cdn.jsdelivr.net/npm/kpc@0.5.14/dist/)
+通过[cdn.jsdelivr.net/npm/kpc/dist/](https://cdn.jsdelivr.net/npm/kpc/dist/)可以直接引入最新版kpc，建议使用锁定版本地址，
+例如：[cdn.jsdelivr.net/npm/kpc@0.5.14/dist/](https://cdn.jsdelivr.net/npm/kpc@0.5.14/dist/)
 
 ```html
 <!DOCTYPE html>
@@ -154,7 +154,7 @@ import {Button, ButtonGroup} from 'kpc/components/button';
 
 1. 新增依赖
 
-为了提高css兼容性，这里加入`autoprefixer`
+为了提供css兼容性，这里加入`autoprefixer`
 
 ```shell
 npm install postcss-loader autoprefixer stylus-loader --save-dev
@@ -179,7 +179,7 @@ module.export = {
             ...
             // 编译stylus
             {
-                test: /\.(styl|css)$/,
+                test: /\.styl$/,
                 use: [
                     {
                         loader: 'style-loader'

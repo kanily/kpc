@@ -38,7 +38,7 @@ import Datepicker from 'kpc/components/datepicker';
         Datepicker.afterThreeMonths,
         Datepicker.beforeOneWeek,
         Datepicker.beforeOneMonth,
-        Datepicker.beforeThreeMonths,
+        Datepicker.beforeThreeMonths
     ] }}/>
     <Datepicker range type="datetime" 
         shortcuts={{ [
@@ -47,7 +47,7 @@ import Datepicker from 'kpc/components/datepicker';
             Datepicker.lastThreeMonths,
             Datepicker.nextWeek,
             Datepicker.nextMonth,
-            Datepicker.nextThreeMonths,
+            Datepicker.nextThreeMonths
         ] }}
     />
 </div>

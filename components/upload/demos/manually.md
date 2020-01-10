@@ -17,7 +17,7 @@ import Upload from 'kpc/components/upload';
 import Button from 'kpc/components/button';
 
 <Upload 
-    ref="upload"
+    ref="instance"
     multiple 
     action="//jsonplaceholder.typicode.com/posts/"
     autoUpload={{ false }}
@@ -40,7 +40,7 @@ export default class extends Intact {
     static template = template;
 
     upload(e) {
-        this.refs.upload.submit();
+        this.refs.instance.submit();
     }
 }
 ```

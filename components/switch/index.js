@@ -7,6 +7,8 @@ export default class Switch extends Intact {
     @Intact.template()
     get template() { return template; }
 
+    static blocks = ['off', 'on'];
+
     defaults() {
         return {
             name: undefined,
@@ -32,7 +34,12 @@ export default class Switch extends Intact {
         height: [Number, String],
         size: ['large', 'default', 'small', 'mini'],
         disabled: Boolean,
-    }
+    };
+
+    static events = {
+        click: true,
+        keypress: true,
+    };
 
     _dragStart(e) {
         if (this.get('disabled') || e.which !== 1) return;
@@ -90,6 +97,13 @@ export default class Switch extends Intact {
         document.removeEventListener('mouseup', this._dragEnd);
     }
 
+    _onClick(e) {
+        this.trigger('click', e);
+        if (!e._switchIgnore) {
+            this._toggle(e, false);
+        }
+    }
+
     _toggle(e, isKeypress) {
         if (this.get('disabled')) return;
 
@@ -106,6 +120,7 @@ export default class Switch extends Intact {
     }
 
     _onKeypress(e) {
+        this.trigger('keypress', e);
         if (e.keyCode === 13) {
             this._toggle(e, true);
         }
@@ -124,7 +139,9 @@ export default class Switch extends Intact {
     }
 
     _handleClick(e) {
-        e.stopPropagation();
+        // we can not stop propagation, otherwise the click can not be listen at outer
+        e._switchIgnore = true;
+        // e.stopPropagation();
     }
 }
 

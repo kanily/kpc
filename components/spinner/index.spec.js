@@ -1,6 +1,9 @@
 import StepDemo from '~/components/spinner/demos/step';
 import PrecisionDemo from '~/components/spinner/demos/precision';
 import {mount, unmount, dispatchEvent} from 'test/utils';
+import {Spinner} from 'kpc/components/spinner';
+import Intact from 'intact';
+import FormatterDemo from '~/components/spinner/demos/formatter';
 
 describe('Spinner', () => {
     let instance;
@@ -60,6 +63,7 @@ describe('Spinner', () => {
         dispatchEvent(input1, 'change');
         expect(spinner1.innerHTML).to.matchSnapshot();
         expect(input1.value).to.eql('1');
+        expect(instance.get('value1')).to.eql(1);
 
         const input2 = spinner2.querySelector('.k-inner');
         expect(input2.value).to.eql('0.0');
@@ -84,5 +88,50 @@ describe('Spinner', () => {
         input.value = '100';
         dispatchEvent(input, 'input');
         expect(instance.get('value1')).to.eql(10);
+    });
+
+    it('should log error when max < min', () => {
+         class Component extends Intact {
+            @Intact.template()
+            static template = `<Spinner min={{ 20 }}
+                max={{ 0 }}
+                step={{ undefined }}
+                value={{ 1 }}
+            />`;
+            _init() {
+                this.Spinner = Spinner;
+            }
+        }
+        instance = mount(Component);
+        expect(instance.element.innerHTML).to.matchSnapshot();
+    });
+
+    it('should format value', () => {
+        instance = mount(FormatterDemo);
+
+        const [input1, input2] = instance.element.querySelectorAll('input');
+        expect(input1.value).to.eql('￥1,000');
+        expect(input2.value).to.eql('增长率 78%');
+
+        // increase / decrease
+        const increase = instance.element.querySelector('.k-left');
+        increase.click();
+        expect(input1.value).to.eql('￥999');
+        const decrease = instance.element.querySelectorAll('.k-right')[1];
+        decrease.click();
+        expect(input2.value).to.eql('增长率 79%');
+
+        // input
+        input1.value = 9999
+        dispatchEvent(input1, 'input');
+        expect(input1.value).to.eql('￥9,999');
+        expect(instance.get('money')).to.eql(9999);
+
+        input2.value = 99
+        dispatchEvent(input2, 'input');
+        expect(input2.value).to.eql('99');
+        expect(instance.get('percent')).to.eql(99);
+        dispatchEvent(input2, 'change');
+        expect(input2.value).to.eql('增长率 99%');
     });
 });

@@ -14,31 +14,31 @@ order: 1
 You can use the `data` property to define the content of the `Tab`.
 
 ```vdt
-import {Tabs, Tab} from 'components/tabs';
+import {Tabs, Tab} from 'kpc/components/tabs';
 
 <div>
     <Tabs 
         data={{ [
             {
-                text: 'Inbound rule',
-                value: 'rulein',
+                text: '入站规则',
+                value: 'rulein'
             },
             {
-                text: 'Outbound rule',
-                value: 'ruleout',
+                text: '出站规则',
+                value: 'ruleout'
             },
             {
-                text: 'Associated cloud host',
-                value: 'relatedVM',
+                text: '关联云主机',
+                value: 'relatedVM'
             }
         ] }} 
         v-model="tab"  
     />
 
     <div class="content">
-        <div v-if={{ self.get('tab') == 'rulein' }}>inbound rule</div>
-        <div v-else-if={{ self.get('tab') == 'ruleout' }}>outbound rule</div>
-        <div v-else>associated cloud host</div> 
+        <div v-if={{ self.get('tab') === 'rulein' }}>入站规则</div>
+        <div v-else-if={{ self.get('tab') === 'ruleout' }}>出站规则</div>
+        <div v-else>关联云主机</div> 
     </div>
 </div>
 

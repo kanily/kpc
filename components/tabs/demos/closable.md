@@ -76,7 +76,8 @@ export default class extends Intact {
         // If the current tab is deleted, switch to the next one
         let tab = this.get('tab');
         if (value === tab) {
-            tab = (tabs[index] || tabs[index - 1]).value
+            const item = tabs[index] || tabs[index - 1];
+            tab = item ? item.value : null;
         }
 
         this.set({tabs, tab});
@@ -92,10 +93,6 @@ export default class extends Intact {
         this.set({tabs, tab: id});
     }
 }
-```
-
-```js-head
-let id = 3;
 ```
 
 

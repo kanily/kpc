@@ -4,7 +4,7 @@ import DropdownMenu from './menu';
 import '../../styles/kpc.styl';
 import './index.styl';
 
-const {h, Types} = Intact.Vdt.miss;
+const {clone, Types, h} = Intact.Vdt.miss;
 const _className = Intact.Vdt.utils.className;
 
 export default class Dropdown extends Intact {
@@ -12,23 +12,19 @@ export default class Dropdown extends Intact {
     static template(data) {
         const vNode = data.get('children');
         const isShow = data.get('_isShow');
-        let props = vNode.props;
-        const className = vNode.className || props.className;
-        const classNames = _className({
-            [className]: className,
-            'k-dropdown-open': isShow, 
-        });
-        if (vNode.type & Types.ComponentClassOrInstance) {
-            props = {...props, className: classNames};
+        const className = vNode.className || vNode.props.className;
+        const extraProps = {
+            className: _className({
+                [className]: className,
+                'k-dropdown-open': isShow, 
+            }),
+        };
+        const style = data.get('style');
+        if (style) {
+            extraProps.style = style;
         }
-        return h(
-            vNode.tag, 
-            props, 
-            vNode.children,
-            classNames,
-            vNode.key, 
-            vNode.ref
-        );
+
+        return clone(vNode, extraProps);
     }
 
     static propTypes = {
@@ -101,26 +97,16 @@ export default class Dropdown extends Intact {
     }
 
     _mount() {
-        // the next sibling is DropdownMenu
-        // we can not get the menu by call get('menu') directly,
-        // because the vNode may be cloned
-        // 
-        // we only handle it when mount 
-        // so you can not change the DropdownMenu by key
-        // ohterwise it can not be found 
-        const siblings = this.parentVNode.children;
-        const index = siblings.indexOf(this.vNode);
-        const menu = siblings[index + 1];
-        menu.children.dropdown = this;
-        this.menu = menu;
+        // add instance to dom, for menu to get it by previousSibling
+        this.element._dropdown = this;
     }
 
     show(fn, e, isFocus) {
         if (typeof fn === 'function') fn(e);
 
-        if (this.get('disabled')) return;
+        if (this.get('disabled') || e && e._hide === this) return;
 
-        const menu = this.menu.children;
+        const menu = this.menu;
         menu.__event = e;
         menu.show();
 
@@ -134,7 +120,7 @@ export default class Dropdown extends Intact {
 
         if (this.get('disabled')) return;
 
-        const menu = this.menu.children;
+        const menu = this.menu;
         menu.hide(immediately);
     }
 }

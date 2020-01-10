@@ -4,7 +4,9 @@
 import Intact from 'intact';
 import template from './index.vdt'
 import '../../styles/kpc.styl';
-import './index.styl'
+import './index.styl';
+
+const {isEqual} = Intact.utils;
 
 export default class Slider extends Intact {
     get template() { return template; }
@@ -22,6 +24,9 @@ export default class Slider extends Intact {
             isShowStop: false,
             marks: undefined,
             disabled: false,
+            showTooltip: false,
+            always: false,
+            animate: true,
 
             _sliderValue: 0,
             _inputValue:0,
@@ -43,12 +48,21 @@ export default class Slider extends Intact {
         isShowStop: Boolean,
         marks: Object,
         disabled: Boolean,
-    }
+        showTooltip: Boolean,
+        always: Boolean,
+        animate: Boolean,
+    };
+
+    static events = {
+        change: true,
+    };
+
+    static blocks = ['tooltip'];
 
     _init() {
         this.on("$change:_inputValue", (c, val) => {
             if (!this.get('_isDragging')) {
-                this._setFixedValue(val);
+                this._setFixedValue(val, true);
             }
         });
         // make sure the min/max/step is valid
@@ -60,20 +74,37 @@ export default class Slider extends Intact {
                 }
             });
         });
-        ['min', 'max', 'step', 'value'].forEach(item => {
-            this.on(`$receive:${item}`, () => {
-                if (!this.get('_isDragging')) {
-                    this._setFixedValue(this.get('value'));
-                }
-            });
+        const needFixedKeys = ['min', 'max', 'step', 'value'];
+        this.on('$receive', (c, keys) => {
+            if (
+                !this.get('_isDragging') &&
+                needFixedKeys.find(key => keys.indexOf(key) > -1)
+            ) {
+                this._setFixedValue(this.get('value'));
+            }
+        });
+
+        // trigger change event expect dragging
+        // we will also trigger the event on keyup and dragend
+        this.on('$change:value', (c, v) => {
+            if (!this.get('_isDragging')) {
+                this.trigger('change', v);
+            }
+        });
+
+        // position the tooltip after value changed
+        this.on('$changed:value', () => {
+            if (this.get('always')) {
+                this._showTooltip();
+            }
         });
     }
 
-    _setFixedValue(value) {
+    _setFixedValue(value, isFromSpinner) {
         const fixedValue = this._getFixedValue(value);
         this.set({
             value: fixedValue,
-            _inputValue: fixedValue,
+            _inputValue: isFromSpinner ? value : fixedValue,
             _sliderValue: fixedValue,
         });
     }
@@ -98,13 +129,18 @@ export default class Slider extends Intact {
     _fix(v) {
         let {step, max, min} = this.get();
 
+        if (min > max) {
+            Intact.utils.error(new Error(`[Slider] min must less than or equal to max, but got min: ${min} max: ${max}`));
+            return 0;
+        }
+
         if (Number.isNaN(Number(v))) {
             return min;
         } else if (v < min) {
             return min;
         } else if (v > max) {
             return max;
-        } else {
+        } else if (step) {
             // for the accuracy
             let fixedValue = Number((Math.round(v / step) * step).toFixed(10));
             if (fixedValue < min) {
@@ -115,6 +151,7 @@ export default class Slider extends Intact {
                 return fixedValue;
             }
         }
+        return v;
     }
 
     _clickWrapper(e) {
@@ -184,6 +221,27 @@ export default class Slider extends Intact {
             _inputValue: fixedValue,
             _sliderValue: tempValue,
         });
+        this._showTooltip();
+    }
+
+    _showTooltip() {
+        if (!this.get('showTooltip')) return;
+
+        const {tooltip1, tooltip2} = this.refs;
+        tooltip1.show();
+        tooltip1.position();
+        if (tooltip2) {
+            tooltip2.show();
+            tooltip2.position();
+        }
+    }
+
+    _hideTooltip() {
+        const {tooltip1, tooltip2} = this.refs;
+        tooltip1.hide();
+        if (tooltip2) {
+            tooltip2.hide();
+        }
     }
 
     _getTempValue(value, isRange, min, max, isFirst) {
@@ -231,7 +289,8 @@ export default class Slider extends Intact {
 
             this._setFixedValue(newValue);
 
-            this.trigger('stop', this.get('value'));
+            // this.trigger('stop', this.get('value'));
+            this._triggerChangeEvent();
 
             window.removeEventListener('mousemove', this.__onRangeSliding);
             window.removeEventListener('mouseup', this.__onRangeSlideEnd);
@@ -243,12 +302,16 @@ export default class Slider extends Intact {
     _onFocusin(indexFlag, e) {
         if (this.get('disabled')) return;
 
-        // if the focusin is invoked by dragging
-        // let the handle element blur
-        // because k-active will add focus style
+        // when mouse down the handle will focus too
+        // if the focusin is invoked by mousedown for dragging 
+        // let the handle element blur to ignore keyboard operations
+        // but we also need to set the states
         if (this._isDragging) {
             e.target.blur();
         }
+
+        // remain the old value to detect change to trigger change event
+        this._oldValue = this.get('value');
 
         if (this.get('isRange')) {
             const value = this.get('value');
@@ -272,6 +335,7 @@ export default class Slider extends Intact {
         } else {
             this.set('_isDragging', true);
         }
+        this._showTooltip();
     }
 
     _onFocusout(indexFlag) {
@@ -286,6 +350,7 @@ export default class Slider extends Intact {
         }
 
         this.set('_isDragging', false, {async: true});
+        this._hideTooltip();
     }
 
     _onKeydown(indexFlag, e) {
@@ -299,36 +364,57 @@ export default class Slider extends Intact {
         }
     }
 
+    // trigger change event when keyup
+    _onKeyUp({keyCode}) {
+        if (keyCode === 37 || keyCode === 39) {
+            this._triggerChangeEvent();
+        }
+    }
+
+    _triggerChangeEvent() {
+        const {value} = this.get();
+        if (!isEqual(this._oldValue, value)) {
+            this._oldValue = value;
+            this.trigger('change', value);
+        }
+    }
+
     _setValue(indexFlag, step) {
         const value = this.get('value');
 
         if (!this.get('isRange')) {
-            return this._setFixedValue(value + step);
-        }
+            this._setFixedValue(value + step);
+        } else {
+            this._initValue += step;
+            this._initValue = this._fix(this._initValue);
+            
+            let _value = this._getTempValue(
+                this._initValue, indexFlag, 
+                this._min, this._max,
+                indexFlag === '_isFirst'
+            );
 
-        this._initValue += step;
-        this._initValue = this._fix(this._initValue);
-        
-        let _value = this._getTempValue(
-            this._initValue, indexFlag, 
-            this._min, this._max,
-            indexFlag === '_isFirst'
-        );
+            this._setFixedValue(_value);
 
-        this._setFixedValue(_value);
-
-        // if overstep the boundary, reverse it
-        if (indexFlag === '_isFirst') {
-            if (this._initValue > this._max) {
-                this.$sliderFirstBtn.blur();
-                this.$sliderSecondBtn.focus();
+            // if overstep the boundary, reverse it
+            if (indexFlag === '_isFirst') {
+                if (this._initValue > this._max) {
+                    this.$sliderFirstBtn.blur();
+                    this.$sliderSecondBtn.focus();
+                }
+            } else if (indexFlag === '_isSecond') {
+                if (this._initValue < this._min) {
+                    this.$sliderSecondBtn.blur();
+                    this.$sliderFirstBtn.focus();
+                }
             }
-        } else if (indexFlag === '_isSecond') {
-            if (this._initValue < this._min) {
-                this.$sliderSecondBtn.blur();
-                this.$sliderFirstBtn.focus();
-            }
         }
+        this._showTooltip();
+    }
+
+    // only change the input value after change event tiggered, #294
+    _onChange() {
+        this.set('_inputValue', this.get('value'));
     }
 
     _setOneValue(v) {
@@ -344,7 +430,7 @@ export default class Slider extends Intact {
         e.stopPropagation();
     }
 
-    _destory() {
+    _destroy() {
         this._onRangeSlideEnd()
     }
 }

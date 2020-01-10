@@ -27,13 +27,23 @@ sidebar: doc
 | disableRow | 定义行禁用可选的逻辑，返回`true`，则改行被禁用选择 | `Function` | `function(data, index) { return false }` |
 | rowExpandable | 是否点击改行任意区域即展开 | `Boolean` | `true` |
 | expandedKeys | 通过`key`来指定哪些行展开 | `Array` | `[]` |
-| type | 表格类型，默认左右无边框，`"border"`类型会添加边框 | `"default"` &#124; `"border"` | `"default"` |
+| type | 表格类型，默认左右无边框，`"border"`类型会添加边框, `"grid"`类型会展示栅格边框 | `"default"` &#124; `"border"` &#124; `"grid"` | `"default"` |
 | sort | 排序，详见示例说明 | `Object` | `{}` |
 | group | 分组，详见示例说明 | `Object` | `{}` |
 | minColWidth | 指定所有列拖动时的最小宽度 | `Number` | `40` |
 | loading | 是否展示加载状态 | `Boolean` | `false` |
 | container | 指定`group`弹出菜单追加的位置，默认：`Dialog`类型的组件会追加到`Dialog`中，其他会追加到`body`中。你可以传入函数返回一个DOM用来作为插入的容器，或者传入字符串用来给`querySelector`进行查询 | `Function` &#124; `String` | `undefined` |
 | stripe | 相邻行是否展示不同的背景色 | `Boolean` | `false` |
+| rowSelectable | 是否点击行时高亮改行，取值为`multiple`时，可以同时高亮多行 | `Boolean` &#124; `"single"` &#124; `"multiple"` | `false` |
+| selectedKeys | 当`rowSelectable`取值为非`false`时，指定哪些行高亮 | `Array` | `[]` |
+| defaultWidth | 指定表格初始化宽度，可以指定百分比，像素值必须带上单位`px` | `String` | `undefined` |
+| defaultWidthMap | 指定表格初始化每列列宽，该值为`Object`，`key`对应为每列的`key`，`value`为每列列宽像素值，不带单位`px`，不能指定百分比。它的优先级高于`TableColumn`中的`width`定义 | `Object` | `{}` |
+| storeWidth | 如果要保存表格拖动后的列宽信息，可以通过该属性设置保存到`localStorage`中的`key` | `String` | `undefined` |
+| merge | 指定表格单元格合并逻辑 | `Function` | `undefined` |
+| tooltipPosition | 行提示的位置 | `"left"` &#124; `"bottom"` &#124; `"right"` &#124; `"top"` &#124; `Object` | `"top"` |
+| childrenKey | 树形表格指定子元素键名 | `String` | `"children"` |
+| indent | 树形表格指定子元素缩进宽度 | `Number` | `32` |
+| spreadKeys | 树形表格指定展开的行 | `Array` | `[]` |
 
 ## TableColumn
 
@@ -50,9 +60,10 @@ sidebar: doc
 | group | 指定分组数组，每一项格式为`{value: '选中后的值', label: '展示的文案'}` | `Array<Object>` | `undefined` |
 | multiple | 分组是否支持多选 | `Boolean` | `false` |
 | minWidth | 指定当前列拖动时的最小宽度，优先级高于`Table`的`minColWidth` | `Number` | `40` |
-| fix | 是否将列固定，`"left"`固定在左侧；`"right"`固定在右侧 | `"left"` &#124; `"right"` | `undefined` |
-| class | 给当前列添加className | `String` &#124; `Object` | `undefined` |
+| fixed | 是否将列固定，`"left"`固定在左侧；`"right"`固定在右侧 | `"left"` &#124; `"right"` | `undefined` |
+| className | 给当前列添加className | `String` &#124; `Object` | `undefined` |
 | ignore | 是否忽略当前列的导出 | `Boolean` | `false` |
+| align | 当前列对齐方式 | `"left"` &#124; `"center"` &#124; `"right"` | `undefined` |
 
 # 扩展点
 
@@ -62,6 +73,7 @@ sidebar: doc
 | --- | --- | --- |
 | no-data | 自定义无数据展示模板 | - |
 | expand | 指定行展开后要展示的模板内容 | `data, index` |
+| tooltip | 行提示内容 | `data, index` |
 
 ## TableColumn
 
@@ -79,6 +91,7 @@ sidebar: doc
 | 方法名 | 说明 | 参数 | 返回值 |
 | --- | --- | --- | --- |
 | getCheckedData | 获取选中数据信息 | - | `Array` |
+| getSelectedData | 获取高亮行数据信息 | - | `Array` |
 | checkAll | 全部选中 | - | `undefined` |
 | uncheckAll | 全不选中 | - | `undefined` |
 | isCheckAll | 判断是否全选 | - | `Boolean` |
@@ -95,4 +108,5 @@ sidebar: doc
 | 事件名 | 说明 | 参数 |
 | --- | --- | --- |
 | $change:checked | 选中的数据变化会触发的事件 | `instance, newValue, oldValue` |
-| click:row | 点击行时触发，当点击`input`元素或者行`disabled`时不会触发 | `data, index, key, event` |
+| changeWidth | 当列宽拖动发生变化后触发 | `widthMap, tableWidth` |
+| click:row | 点击某行触发 | `data, index, key, event` |

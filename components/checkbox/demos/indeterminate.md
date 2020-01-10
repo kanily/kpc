@@ -84,3 +84,9 @@ computed: {
     }
 },
 ```
+
+```angular-methods
+get length() {
+    return this.languages.length;
+}
+```

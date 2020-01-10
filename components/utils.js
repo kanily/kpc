@@ -1,8 +1,7 @@
 import Intact from 'intact';
-import { functionTypeAnnotation } from 'babel-types';
 
 const utils = Intact.utils;
-const {get, isNullOrUndefined, isObject, isFunction, noop} = utils;
+const {get, isNullOrUndefined, isObject, isFunction, noop, extend} = utils;
 const Types = Intact.Vdt.miss.Types;
 
 export {get, isNullOrUndefined, isObject, isFunction, noop};
@@ -41,11 +40,20 @@ export function isStringOrNumber(o) {
 }
 
 export function isTextChildren(o) {
-    return isStringOrNumber(o) || isTextVNode(o);
+    if (isStringOrNumber(o)) return true;
+    if (Array.isArray(o)) {
+        return o.every(item => isTextChildren(item));
+    }
+    return isTextVNode(o);
 }
 
 export function isTextVNode(o) {
     return o && o.type === Types.Text;
+}
+
+// for detect if it is a text node in Angular
+export function isTextBlock(o) {
+    return isTextChildren(o) || o && o.tag && o.tag.$id === 'AngularBlockWrapper' && o.props.isText;
 }
 
 export function isStringOrNumberNotEmpty(o) {
@@ -83,9 +91,19 @@ export function findParentComponent(Component, instance, isUntil) {
     return ret;
 }
 
-// find the router instance
-// in React, find the history of history
-// in Vue, find the $router
+/**
+ * @brief find the router instance
+ *
+ * in React, find the history of router
+ * for react-router@5, we need get the history from providers
+ * as it use the new context api of React
+ *
+ * in Vue, find the $router
+ *
+ * @param instance
+ *
+ * @return
+ */
 export function findRouter(instance) {
     const Component = instance.constructor;
     if (Component.$$cid === 'IntactReact') {
@@ -94,15 +112,25 @@ export function findRouter(instance) {
         while (parentVNode) {
             let i;
             if (
-                parentVNode.type === Types.ComponentClass && 
-                (i = parentVNode.children.context) &&
-                (i = i.router)
+                parentVNode.type === Types.ComponentClass &&
+                (i = parentVNode.children.context)
             ) {
-                return i.history;
+                if (i = i.router) {
+                    return i.history;
+                } else if (i = parentVNode.children.__providers) {
+                    // for react-router@5
+                    const iter = i.entries();
+                    while (i = iter.next().value) {
+                        if (i[0]._context.displayName === 'Router' && (i = i[1]).history) {
+                            return i.history;
+                        }
+                    }
+                }
+                break;
             }
             parentVNode = parentVNode.parentVNode;
         }
-    } else if (Component.cid = 'IntactVue') {
+    } else if (Component.cid === 'IntactVue') {
         return instance.get('_context').data.$router;
     }
 }
@@ -220,14 +248,31 @@ export function mapChildren(children, callback) {
 
 export const expandAnimationCallbacks = {
     'a:transition': 'c-expand',
-    'ev-a:leaveStart': (el) => el.style.height = el.clientHeight + 'px',
+    'ev-a:leaveStart': (el) => {
+        el._height || (el._height = el.clientHeight + 'px');
+        el.style.height = el._height;
+    },
     'ev-a:leave': (el) => el.style.height = 0,
+    'ev-a:leaveEnd': (el, isCancel) => {
+        // 保持动画的连贯性，可能在leave动画被enter动画cancel
+        // 此时el._height存在，不要在start中去获取，否则会重绘
+        // 导致多个动画时，动画时长不一致
+        if (!isCancel) {
+            el.style.height = '';
+            el._height = null;
+        }
+    },
     'ev-a:enterStart': (el) => {
-        el._height = el.clientHeight + 'px';
+        el._height || (el._height = el.clientHeight + 'px');
         el.style.height = 0;
     },
     'ev-a:enter': (el) => el.style.height = el._height,
-    'ev-a:enterEnd': (el) => el.style.height = '',
+    'ev-a:enterEnd': (el, isCancel) => {
+        if (!isCancel) {
+            el.style.height = '';
+            el._height = null;
+        }
+    },
 };
 
 export function toggleArray(arr, value) {
@@ -249,18 +294,18 @@ export function isNumber(n) {
     return typeof n === 'number';
 }
 
+export const hasWindow = typeof window !== 'undefined';
+
 let raf;
-if (typeof window !== 'undefined') {
-    raf = window.requestAnimationFrame ? 
+if (hasWindow) {
+    raf = window.requestAnimationFrame ?
         window.requestAnimationFrame.bind(window) : setTimeout;
 }
 export function nextFrame(fn) {
     raf(() => raf(fn));
-    // bellow does not work in firefox
-    // raf(fn);
 }
 
-export function throttle(fn, delay) {
+export function debounce(fn, delay) {
     let timer;
     return function() {
         const args = arguments;
@@ -270,6 +315,20 @@ export function throttle(fn, delay) {
             fn.apply(context, args);
         }, delay);
     };
+}
+
+export function throttle(fn, delay) {
+    let lock = false;
+    return function() {
+        if (lock) return;
+        lock = true;
+        const args = arguments;
+        const context = this;
+        const timer = setTimeout(() => {
+            fn.apply(context, args);
+            lock = false;
+        }, delay);
+    }
 }
 
 export const browser = {};
@@ -300,4 +359,33 @@ const externalLinkReg = /^(https?:)?\/\//;
 export function isExternalLink(to) {
     if (typeof to !== 'string') return false;
     return externalLinkReg.test(to);
+}
+
+export function getRestProps(instance, props = instance.get()) {
+    const selfProps = instance.defaults() || {};
+    const events = instance.constructor.events || {};
+    const ret = {};
+    for (let key in props) {
+        if (
+            key === 'key' ||
+            key === 'ref' ||
+            key === 'className' ||
+            key === 'children' ||
+            key === 'v-model' ||
+            key[0] === '_' ||
+            key in selfProps ||
+            key.substring(3) in events ||
+            // ev-$change / $destroy
+            key.substring(0, 4) === 'ev-$'
+        ) continue;
+        ret[key] = props[key];
+    }
+    return ret;
+}
+
+export const config = {
+    useWrapper: false
+};
+export function configure(options) {
+    extend(config, options);
 }

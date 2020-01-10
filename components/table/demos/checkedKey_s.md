@@ -50,12 +50,11 @@ import Table from 'kpc/components/table';
 .no-data-template
     display: flex
     margin-bottom: 20px
-    .k-table-wrapper
+    .k-table
         margin-left: 20px
 ```
 
 ```js
-
 export default class extends Intact {
     @Intact.template()
     static template = template;

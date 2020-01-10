@@ -20,6 +20,11 @@ const packageJson = require('./package.json');
 const childProcess = require('child_process');
 const uglifyjs = require('gulp-uglify');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
+const fsExtra = require('fs-extra');
+const ts = require('gulp-typescript');
+const KS3 = require('ks3');
+
+const fsPromises = fs.promises;
 
 const pages = {
     '/': 'index',
@@ -28,6 +33,12 @@ const vdtFile = path.resolve(__dirname, './site/src/index.vdt');
 const isDev = process.env.NODE_ENV !== 'production';
 
 let globalIframes;
+
+const rm = (path) => {
+    return new Promise(resolve => {
+        rimraf(path, resolve);
+    });
+};
 
 gulp.task('doc', () => {
     console.log('build markdown');
@@ -93,6 +104,7 @@ gulp.task('webpack', () => {
 });
 
 gulp.task('dev:doc:server', async () => {
+    pages.demo = 'demo';
     await Promise.all(Object.keys(pages).map(async key => {
         await new Promise(resolve => {
             fs.writeFile(
@@ -143,14 +155,9 @@ gulp.task('watch', gulp.series(
     )
 ));
 
-const rm = (path) => {
-    return new Promise(resolve => {
-        rimraf(path, resolve);
-    });
-};
 gulp.task('clean:doc', () => {
     return exec(`rm -rf ./site/dist; REPO=\`git config remote.origin.url\`; echo $REPO;
-        git clone -b gh-pages --single-branch $REPO ./site/dist --depth=1 &&
+        git clone --reference ./ -b gh-pages --single-branch $REPO ./site/dist --depth=1 &&
         cd ./site/dist &&
         rm -rf ./* && cd ../../`
     );
@@ -185,6 +192,39 @@ gulp.task('build:doc:client', (done) => {
         done();
     });
 });
+gulp.task('upload:doc', (done) => {
+    const AK = process.env.KS3_AK;
+    const SK = process.env.KS3_SK;
+    const bucketName = 'damife';
+    const filePath = path.resolve(__dirname, './site/dist');
+    const key = 'kpc';
+    const region = 'BEIJING'; //BEIJING|SHANGHAI|HONGKONG|AMERICA
+
+    const ks3 = new KS3(AK, SK, bucketName, region);
+    console.log('Start upload files to ks3. Time:' + new Date());
+    console.log('Upload "' + filePath + '" to "' + key + '"');
+    ks3.upload.start({
+        Bucket: bucketName,
+        filePath: filePath,
+        region: region,
+        Key: key,
+        ACL: 'public-read',
+        fileSetting: {
+            isDeep: true,
+            ignore: /(.(swp|ds_store)$)/ig
+        }
+    }, (err, data, res) => {
+        if (err) {
+            console.log(err);
+        } else {
+            console.log(data);
+            console.log('Upload finished. Time:' + new Date());
+            done();
+        }
+    }, {
+        'Cache-Control': 'no-cache,max-age=0'
+    });
+});
 gulp.task('push:doc', () => {
     return exec(`cd ./site/dist && 
         git add -A;
@@ -205,7 +245,7 @@ gulp.task('copy:cname', () => {
 });
 
 gulp.task('build:doc', gulp.series('clean:doc', 'build:doc:server', 'build:doc:client', 'build:themes:css', 'build:iframes', 'copy:imgs', 'copy:cname'));
-gulp.task('deploy:doc', gulp.series('build:doc', 'push:doc'));
+gulp.task('deploy:doc', gulp.series('build:doc', 'upload:doc', 'push:doc'));
 gulp.task('watch:doc', gulp.series('doc:production', gulp.parallel('webpack', () => {
     gulp.watch('./@(components|docs)/**/*.md', {ignored: /node_modules/}, gulp.parallel('doc:production'));
 })));
@@ -218,7 +258,8 @@ gulp.task('watch:doc', gulp.series('doc:production', gulp.parallel('webpack', ()
 function buildVdt(destPath) {
     return gulp.src(['./components/**/*.vdt'], {base: './'})
         .pipe(vdt({
-            format: 'cjs',
+            format: 'module',
+            // format: 'cjs',
             delimiters: ['{{', '}}'],
             noWith: true,
             skipWhitespace: true,
@@ -231,7 +272,9 @@ function buildVdt(destPath) {
 }
 
 function buildFont(destPath) {
-    return gulp.src(['./styles/fonts/*.@(eot|svg|ttf|woff)'], {base: './'})
+    return gulp.src([
+        './styles/fonts/*.@(eot|svg|ttf|woff)',
+    ], {base: './'})
         .pipe(gulp.dest(destPath));
 }
 
@@ -241,6 +284,10 @@ function buildI18n(destPath) {
         .pipe(gulp.dest(destPath));
 }
 
+const metadata = {};
+const isIgnoreComponents = (name) => {
+    return ['code', 'diagram'].indexOf(name) > -1;
+};
 gulp.task('index', () => {
     const codes = [];
     const components = [];
@@ -263,8 +310,12 @@ gulp.task('index', () => {
                 name = name.split(' as ');
                 return name[name.length - 1].trim();
             });
-            components.push(...names);
-            codes.push(`import {${names.join(', ')}} from './components/${paths[paths.length - 2]}';`);
+            const dirname = paths[paths.length - 2];
+            if (!isIgnoreComponents(dirname)) {
+                components.push(...names);
+                codes.push(`import {${names.join(', ')}} from './components/${dirname}';`);
+            }
+            metadata[dirname] = names;
         }))
         .on('end', () => {
             // add position.js
@@ -297,28 +348,50 @@ gulp.task('clean@single', (done) => {
     rimraf('./dist', done);
 });
 
-gulp.task('build:js@single', () => {
+function buildSingleFile(type) {
     const p1 = new Promise(resolve => {
-        webpack(webpackBuildConfig(), (err, stats) => {
-            console.log(stats.toString({
-                colors: true    // 在控制台展示颜色
-            }));
+        webpack(webpackBuildConfig(null, type), (err, stats) => {
             resolve();
         });
     });
     const p2 = new Promise(resolve => {
-        webpack(webpackBuildConfig('ksyun'), (err, stats) => {
-            console.log(stats.toString({
-                colors: true    // 在控制台展示颜色
-            }));
+        webpack(webpackBuildConfig('ksyun', type), (err, stats) => {
             resolve();
         });
     });
-    return Promise.all([p1, p2]);
+
+    return [p1, p2];
+}
+gulp.task('build:js@single', () => {
+    return Promise.all(buildSingleFile());
+});
+function copySingleFileToPackage(type) {
+    const path = `./packages/kpc-${type}`;
+    return rm(`${path}/dist`).then(() => {
+        return gulp.src([
+            './dist/fonts/**/*', 
+            './dist/i18n/**/*',
+            `./dist/kpc.${type}.*`,
+            './dist/*.css'
+        ], {base: './'})
+        .pipe(gulp.dest(path));
+    });
+}
+gulp.task('build:vue@single', () => {
+    return Promise.all(buildSingleFile('vue'));
+});
+gulp.task('copy:vue@single', () => {
+    return copySingleFileToPackage('vue');
+});
+gulp.task('build:react@single', () => {
+    return Promise.all(buildSingleFile('react'));
+});
+gulp.task('copy:react@single', () => {
+    return copySingleFileToPackage('react');
 });
 
-gulp.task('build:i18n@single', () => {
-    return gulp.src('./i18n/**/*.js', {base: './'})
+gulp.task('build:i18n@single', (done) => {
+    gulp.src('./i18n/**/*.js', {base: './'})
         .pipe(tap((file, t) => {
             webpack({
                 entry: {
@@ -347,10 +420,30 @@ gulp.task('build:i18n@single', () => {
                     ]
                 }
             }, (err, stats) => {
-                console.log(stats.toString({
-                    colors: true
-                }));
+                done();
             });
+        }));
+});
+
+gulp.task('inject@single', () => {
+    return gulp.src(['./dist/kpc.js', './dist/kpc.vue.js', './dist/kpc.react.js'], {base: './'})
+        .pipe(tap(file => {
+            let contents = file.contents.toString('utf-8');
+            contents = contents.replace(
+                `return (pathPrefix ? stripTrailingSlash(pathPrefix) + '/' : '') + paths[label];`,
+                `return 'data:text/javascript;charset=utf-8,' + encodeURIComponent('importScripts("' + (pathPrefix ? stripTrailingSlash(pathPrefix) + '/' : '') + paths[label] + '")')`
+            );
+            contents = [
+                `// get the url for this script file to init crossdomain webworker #312`,
+                `(function() {`,
+                `    var scripts = document.getElementsByTagName('script');`,
+                `    var index = scripts.length - 1;`,
+                `    var src = scripts[index].src;`,
+                `    window.__webpack_public_path__ = src.substring(0, src.lastIndexOf('/'));`,
+                `})();`,
+                ``
+            ].join('\n') + contents;
+            fs.writeFileSync(file.path,  contents);
         }));
 });
 
@@ -358,6 +451,12 @@ gulp.task('uglify@single', () => {
     return gulp.src('./dist/**/*.js')
         .pipe(tap((file) => {
             file.path = file.path.replace('.js', '.min.js');
+            // const filename = path.basename(file.path);
+            // if (/^kpc/.test(filename)) {
+                // contents = file.contents.toString('utf-8');
+                // contents = contents.replace(/"([^\.]*)\.worker\.js"/g, '"$1.worker.min.js"');
+                // file.contents = Buffer.from(contents);
+            // }
         }))
         .pipe(uglifyjs())
         .pipe(gulp.dest('./dist'));
@@ -365,8 +464,10 @@ gulp.task('uglify@single', () => {
 
 gulp.task('build@single', gulp.series(
     'clean@single',
-    gulp.parallel('build:js@single', 'build:i18n@single'),
-    'uglify@single'
+    gulp.parallel('build:js@single', 'build:vue@single', 'build:react@single', 'build:i18n@single'),
+    // 'inject@single',
+    'uglify@single',
+    gulp.parallel('copy:vue@single', 'copy:react@single')
 ));
 
 const destPath = './@css';
@@ -376,13 +477,20 @@ gulp.task('clean@css', (done) => {
 });
 
 gulp.task('build:js', () => {
-    return gulp.src(['./components/**/*.js', '!./components/**/*.spec.js', './index.js'], {base: './'})
+    return gulp.src([
+        './components/**/*.js', 
+        '!./components/**/*.spec.js', 
+        './index.js', 
+        './inheritsLoose.js',
+        '!./components/grid/mediaQueryForStylus.js',
+    ], {base: './'})
         .pipe(babel())
         .pipe(tap(function(file) {
             let contents = file.contents.toString('utf-8');
             contents = contents.replace(/\.styl(['"])/g, '.css$1');
             // replace inheritsLoose for IE compatibilty
-            contents = contents.replace('@babel/runtime-corejs2/helpers/inheritsLoose', '../../../inheritsLoose');
+            const relativePath = path.relative(path.dirname(file.path), __dirname + '/inheritsLoose');
+            contents = contents.replace('@babel/runtime-corejs2/helpers/inheritsLoose', relativePath);
             file.contents = Buffer.from(contents);
         }))
         .pipe(gulp.dest(destPath));
@@ -434,12 +542,19 @@ gulp.task('clean@stylus', (done) => {
 });
 
 gulp.task('build:js@stylus', () => {
-    return gulp.src(['./components/**/*.js', '!./components/**/*.spec.js', './index.js'], {base: './'})
+    return gulp.src([
+        './components/**/*.js', 
+        '!./components/**/*.spec.js', 
+        './index.js', 
+        './inheritsLoose.js',
+        '!./components/grid/mediaQueryForStylus.js',
+    ], {base: './'})
         .pipe(babel())
         .pipe(tap(function(file) {
             let contents = file.contents.toString('utf-8');
             // replace inheritsLoose for IE compatibilty
-            contents = contents.replace('@babel/runtime-corejs2/helpers/inheritsLoose', '../../../inheritsLoose');
+            const relativePath = path.relative(path.dirname(file.path), __dirname + '/inheritsLoose');
+            contents = contents.replace('@babel/runtime-corejs2/helpers/inheritsLoose', relativePath);
             file.contents = Buffer.from(contents);
         }))
         .pipe(gulp.dest(destPathStylus));
@@ -453,7 +568,8 @@ gulp.task('build:style@stylus', () => {
     return gulp.src(
             [
                 './styles/*', './styles/themes/**/*', 
-                './styles/fonts/*.styl', './components/**/*.styl'
+                './styles/fonts/*.styl', './components/**/*.styl',
+                './components/grid/mediaQueryForStylus.js',
             ],
             {base: './'}
         ) 
@@ -477,9 +593,166 @@ gulp.task('build@stylus', gulp.series(
     )
 )); 
 
+// build for Vue, React and Angular
+function generateTask(name, dest, useCssAsRoot, type) {
+    if (!type) type = name;
+    dest= dest || `./@${name}`;
+    gulp.task(`clean@${name}`, async () => {
+        await Promise.all([
+            rm(`${dest}/@css`),
+            rm(`${dest}/@stylus`),
+        ]);
+    });
+    gulp.task(`copy@${name}`, () => {
+        return gulp.src(['./@css/**/*', './@stylus/**/*'], {base: './'})   
+            .pipe(tap(file => {
+                if (path.extname(file.path) === '.js') {
+                    file.contents = Buffer.from(file.contents.toString('utf-8').replace(/['"]intact["']/, `'intact-${type}'`));
+                }
+                if (useCssAsRoot && /@css/.test(file.path)) {
+                    file._base = './@css';
+                }
+            }))
+            .pipe(gulp.dest(dest));
+    });
+    gulp.task(`build@${name}`, gulp.series(`clean@${name}`, `copy@${name}`));
+}
+
+const packageAngularPath = './packages/kpc-angular';
+generateTask('vue');
+generateTask('react');
+generateTask('angular', packageAngularPath);
+// generate to seperate package for react and vue
+generateTask('package:vue', './packages/kpc-vue', true, 'vue');
+generateTask('package:react', './packages/kpc-react', true, 'react');
+
+// generate components for Angular
+const angularComponentsPath = `${packageAngularPath}/components`;
+const generateAngular = async () => {
+    await rm(angularComponentsPath);
+
+    for (let key in metadata) {
+        const path = `${angularComponentsPath}/${key}.ts`;
+        const components = metadata[key];
+        const filenames = [];
+        const codes = [
+            `import Intact from 'intact-angular';`,
+            `import {NgModule, NO_ERRORS_SCHEMA} from '@angular/core';`,
+        ];
+        codes.push(`import {${components.join(', ')}} from 'kpc/components/${key}';`, ``);
+        for (let i = 0; i < components.length; i++) {
+            const name = components[i];
+            const selector = name.replace(/[A-Z]/g, (char, index) => {
+                if (index) return `-${char.toLowerCase()}`;
+                else return char.toLowerCase();
+            });
+            codes.push(`export const ${name}Component = Intact.decorate(${name}, 'k-${selector}');`);
+        }
+        // generate module
+        codes.push(
+            ``,
+            `const components = [${components.map(name => `${name}Component`).join(', ')}];`,
+            ``,
+            `@NgModule({`,
+            `    declarations: components,`,
+            `    exports: components,`,
+            `    schemas: [NO_ERRORS_SCHEMA]`,
+            `})`,
+            `export class ${key[0].toUpperCase() + key.substring(1)}Module {}`,
+        );
+        
+        await fsExtra.ensureFile(path);
+        await fsPromises.writeFile(path, codes.join('\n'));
+    } 
+}
+
+const utilsPath = '../../../components/utils';
+const generateAngularIndex = async () => {
+    const imports = [];
+    const exports = [];
+    const modules = [];
+    exports.push(`export {_$, localize} from '${utilsPath}';`, '');
+    for (let key in metadata) {
+        // ignore App and Code...
+        if (key === 'app' || isIgnoreComponents(key)) continue;
+
+        const moduleName = `${key[0].toUpperCase() + key.substring(1)}Module`;
+        imports.push(`import {${moduleName}} from './${key}';`);
+        exports.push(`export * from './${key}';`);
+        modules.push(moduleName);
+    }
+    exports.push('', `export const version = '${packageJson.version}';`);
+    exports.push(`export {IntactAngularBrowserModule as KpcBrowserModule} from 'intact-angular';`);
+
+    const contents = [
+`/*!
+ * kpc ${packageJson.version}
+ *
+ * Copyright (c) Kingsoft Cloud
+ * Released under the MIT License
+ * 
+ * Documentation available at
+ * https://ksc-fe.github.io/kpc/
+ */
+`,
+        `import {NgModule} from '@angular/core';`,
+        ``,
+        ...imports,
+        ``,
+        ...exports,
+        ``,
+        `@NgModule({`,
+        `    exports: [`,
+                modules.map(item => `        ${item},`).join('\n'),
+        `    ]`,
+        `})`,
+        `export class KpcModule {}`,
+    ].join('\n');
+
+    await fsPromises.writeFile(`${angularComponentsPath}/index.ts`, contents);
+}
+const tsconfig = {
+    "experimentalDecorators": true,
+    "module": "esnext",
+    "isolatedModules": true,
+    "importHelpers": true,
+};
+gulp.task('_generate:angular', async () => {
+    await generateAngular();
+    await generateAngularIndex();
+    await gulp.src(`${angularComponentsPath}/**/*.ts`)
+        .pipe(ts(tsconfig))
+        .pipe(tap(function(file) {
+            let contents = file.contents.toString('utf-8');
+            contents = contents.replace(/kpc\/components/g, './components');
+            contents = contents.replace(utilsPath, './components/utils');
+            file.contents = Buffer.from(contents);
+        }))
+        .pipe(gulp.dest(`${packageAngularPath}/@css`))
+        .pipe(gulp.dest(`${packageAngularPath}/@stylus`));
+
+    // await gulp.src(`${angularComponentsPath}/index.ts`)
+        // .pipe(ts(tsconfig))
+        // .pipe(tap(function(file) {
+            // let contents = file.contents.toString('utf-8');
+            // contents = contents.replace(utilsPath, './components/utils');
+            // file.contents = Buffer.from(contents);
+            // console.log(contents);
+        // }))
+        // .pipe(gulp.dest(`${packageAngularPath}/@css`))
+        // .pipe(gulp.dest(`${packageAngularPath}/@stylus`));
+});
+gulp.task('generate:angular', gulp.series('index', '_generate:angular'));
+
+// overwrite build@angular
+gulp.task('build@angular', gulp.series('clean@angular', 'copy@angular', 'generate:angular'));
+gulp.task('_build@angular', gulp.series('clean@angular', 'copy@angular', '_generate:angular'));
+
+// build
 gulp.task('build', gulp.series(
     'index',
-    gulp.parallel('build@css', 'build@stylus', 'build@single')
+    gulp.parallel('build@css', 'build@stylus', 'build@single'),
+    gulp.parallel('build@vue', 'build@package:vue', 'build@react', 'build@package:react', '_build@angular')
 ));
 
 function exec(command) {
@@ -496,6 +769,7 @@ function exec(command) {
     });
 }
 
+// get the lines of all codes
 gulp.task('code', () => {
     const codes = [];
     return gulp.src([
@@ -508,6 +782,6 @@ gulp.task('code', () => {
         }))
         .on('end', () => {
             const path = './dist/code.js';
-            fs.writeFileSync(path,  codes.join('\n'));
+            fs.writeFileSync(path, codes.join('\n'));
         });
-})
+});

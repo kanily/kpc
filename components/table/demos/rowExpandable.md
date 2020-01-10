@@ -43,7 +43,7 @@ import {Table, TableColumn} from 'kpc/components/table';
                         class={{ {
                             'icon': true,
                             'ion-ios-plus-outline': self.get('expandedKeys').indexOf(index) < 0,
-                            'ion-ios-minus-outline': self.get('expandedKeys').indexOf(index) > -1,
+                            'ion-ios-minus-outline': self.get('expandedKeys').indexOf(index) > -1
                         } }}
                         ev-click={{ self.toggleExpand.bind(self, data, index) }}
                     ></i>
@@ -60,7 +60,6 @@ import {Table, TableColumn} from 'kpc/components/table';
     display: flex
     .k-table
         flex 1
-    .k-table-wrapper
         margin-left: 10px
 .icon
     vertical-align middle

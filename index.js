@@ -1,5 +1,5 @@
 /*!
- * kpc v0.8.4
+ * kpc v1.3.3
  *
  * Copyright (c) Kingsoft Cloud
  * Released under the MIT License
@@ -12,13 +12,17 @@ import {_$, localize} from './components/utils';
 
 /* generate start */
 
+import {Affix} from './components/affix';
 import {App} from './components/app';
 import {Badge} from './components/badge';
 import {Breadcrumb, BreadcrumbItem} from './components/breadcrumb';
 import {Button, ButtonGroup} from './components/button';
+import {Card, CardColumn} from './components/card';
+import {Carousel, CarouselItem} from './components/carousel';
 import {Cascader} from './components/cascader';
 import {Checkbox} from './components/checkbox';
 import {Collapse, CollapseItem} from './components/collapse';
+import {Colorpicker} from './components/colorpicker';
 import {Datepicker} from './components/datepicker';
 import {Dialog} from './components/dialog';
 import {Drawer} from './components/drawer';
@@ -26,7 +30,7 @@ import {Dropdown, DropdownMenu, DropdownItem} from './components/dropdown';
 import {Editable} from './components/editable';
 import {Form, FormItem} from './components/form';
 import {Icon} from './components/icon';
-import {Input} from './components/input';
+import {Input, Search} from './components/input';
 import {Layout, Aside, Header, Body, Footer} from './components/layout';
 import {Link} from './components/link';
 import {Menu, MenuItem} from './components/menu';
@@ -42,6 +46,7 @@ import {Select, Option, OptionGroup} from './components/select';
 import {Slider} from './components/slider';
 import {Spinner} from './components/spinner';
 import {Spin} from './components/spin';
+import {Split} from './components/split';
 import {Steps, Step} from './components/steps';
 import {Switch} from './components/switch';
 import {Table, TableColumn} from './components/table';
@@ -56,6 +61,7 @@ import {Tree} from './components/tree';
 import {Upload} from './components/upload';
 
 export {
+    Affix,
     App,
     Aside,
     Badge,
@@ -64,11 +70,16 @@ export {
     BreadcrumbItem,
     Button,
     ButtonGroup,
+    Card,
+    CardColumn,
+    Carousel,
+    CarouselItem,
     Cascader,
     Checkbox,
     Col,
     Collapse,
     CollapseItem,
+    Colorpicker,
     Datepicker,
     Dialog,
     Drawer,
@@ -96,10 +107,12 @@ export {
     Rate,
     Row,
     ScrollSelect,
+    Search,
     Select,
     Slider,
     Spin,
     Spinner,
+    Split,
     Step,
     Steps,
     Switch,
@@ -119,6 +132,7 @@ export {
 };
 
 const components = {
+    Affix,
     App,
     Aside,
     Badge,
@@ -127,11 +141,16 @@ const components = {
     BreadcrumbItem,
     Button,
     ButtonGroup,
+    Card,
+    CardColumn,
+    Carousel,
+    CarouselItem,
     Cascader,
     Checkbox,
     Col,
     Collapse,
     CollapseItem,
+    Colorpicker,
     Datepicker,
     Dialog,
     Drawer,
@@ -159,10 +178,12 @@ const components = {
     Rate,
     Row,
     ScrollSelect,
+    Search,
     Select,
     Slider,
     Spin,
     Spinner,
+    Split,
     Step,
     Steps,
     Switch,
@@ -181,7 +202,7 @@ const components = {
     Upload
 };
 
-export const version = '0.8.4';
+export const version = '1.3.3';
 
 /* generate end */
 

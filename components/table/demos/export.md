@@ -11,6 +11,8 @@ order: 14
 1. `data` 要导出的数据，默认为当前表格的数据
 2. `filename` 下载的文件名，默认为`table`
 
+> 对于合并了表头和单元格的表格，不支持导出（csv格式文件不能合并单元格）
+
 ```vdt
 import {Table, TableColumn} from 'kpc/components/table';
 import {Button} from 'kpc/components/button';
@@ -32,7 +34,7 @@ import {Button} from 'kpc/components/button';
                 </div>
             </b:template>
         </TableColumn>
-        <TableColumn title="操作" key="op" ignore>
+        <TableColumn title="操作" key="op" ignore align="right">
             <b:template params="data">
                 <a>删除</a> 
             </b:template>

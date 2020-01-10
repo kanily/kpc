@@ -1,6 +1,8 @@
 import Intact from 'intact';
 import template from './form.vdt';
 import {methods, messages, classNames, addMethod} from './methods';
+import '../../styles/kpc.styl';
+import './index.styl';
 
 export default class Form extends Intact {
     static methods = methods; 
@@ -19,6 +21,11 @@ export default class Form extends Intact {
         rules: Object,
         labelWidth: [String, Number],
         layout: ['horizontal', 'vertical', 'inline'],
+        starOnRequired: Boolean,
+    };
+
+    static events = {
+        submit: true,
     };
 
     defaults() {
@@ -27,6 +34,7 @@ export default class Form extends Intact {
             rules: {},
             labelWidth: undefined,
             layout: 'horizontal',
+            starOnRequired: false,
         }
     }
 

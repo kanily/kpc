@@ -3,10 +3,13 @@ import template from './index.vdt';
 import '../../styles/kpc.styl';
 import './index.styl';
 import {selectInput} from '../utils';
+import Search from './search';
 
 export default class Input extends Intact {
     @Intact.template()
     static template = template;
+
+    static blocks = ['prepend', 'append', 'prefix', 'suffix'];
 
     static propTypes = {
         type: String,
@@ -25,6 +28,9 @@ export default class Input extends Intact {
         width: [Number, String],
         tabindex: [Number, String],
         autocomplete: String,
+        nativeProps: Object,
+        stackClearIcon: Boolean,
+        frozenOnInput: Boolean,
     };
 
     defaults() {
@@ -45,8 +51,13 @@ export default class Input extends Intact {
             width: undefined,
             tabindex: undefined,
             autocomplete: undefined,
+            nativeProps: undefined,
+            stackClearIcon: false,
+            frozenOnInput: false,
 
             _width: 1,
+            _inputing: false,
+            _originalValue: '',
         }
     }
 
@@ -85,8 +96,19 @@ export default class Input extends Intact {
         this.refs.input.blur();
     }
 
+    _startInput(e) {
+        this.set({_inputing: true, _originalValue: e.target.value});
+        this.trigger('focus', e);
+    }
+
+    _endInput(e) {
+        this.set({_inputing: false});
+        this.trigger('blur', e);
+    }
+
     _onInput(e) {
-        this.set('value', e.target.value);
+        const value = e.target.value;
+        this.set({value, _originalValue: value});
         this.trigger('input', e);
     }
 
@@ -95,4 +117,4 @@ export default class Input extends Intact {
     }
 }
 
-export {Input};
+export {Input, Search};
